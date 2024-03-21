@@ -5,6 +5,7 @@ public:
     MyFrame(const wxString& title);
 
     void OnQuit(wxCommandEvent& event);
+    void OnListItemActivated(wxListEvent& event);
 
 private:
     DECLARE_EVENT_TABLE()

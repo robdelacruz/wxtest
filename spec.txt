@@ -1,0 +1,32 @@
+// Create a control:
+p = new wxControl(this, wxID_ANY, data, wxDefaultPosition, wxDefaultSize...)
+p = new wxControl(this, wxID_ANY, data, wxDefaultPosition, wxDefaultSize, wxDefaultValidator, wxNameStr)
+
+// Sizer:
+vbox = new wxBoxSizer(wxVERTICAL|wxHORIZONTAL)
+vbox->Add(w, proportion, flags, border);
+
+sizer flags:
+wxTOP|BOTTOM|LEFT|RIGHT|ALL
+wxEXPAND|wxSHAPED
+wxFIXED_MINSIZE
+wxALIGN_CENTER|LEFT|RIGHT|TOP|BOTTOM
+wxALIGN_CENTER_VERTICAL|HORIZONTAL
+
+// Add stretch spacer
+vbox->AddSpacer(size)
+vbox->AddStretchSpacer()
+
+// wxListEvent
+EVT_LIST_ITEM_ACTIVATED(wxID_ANY, MyFrame::OnListItemActivated)
+
+void OnListItemActivated(wxListEvent& event)
+wxUINTPtr wxListEvent::GetData()
+long wxListEvent::GetIndex()
+wxListItem& wxListEvent::GetItem()
+
+wxListItem::GetId()
+
+// wxString
+https://wiki.wxwidgets.org/Converting_everything_to_and_from_wxString
+
