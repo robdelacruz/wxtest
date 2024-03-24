@@ -1,3 +1,6 @@
+#ifndef FRAME_H
+#define FRAME_H
+
 extern "C" {
 #include "clib.h"
 #include "db.h"
@@ -20,3 +23,4 @@ private:
     str_t *m_dbfile;
 };
 
+#endif

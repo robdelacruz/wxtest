@@ -1,13 +1,7 @@
+#include "all.h"
 #include <stdio.h>
-extern "C" {
-#include "clib.h"
-#include "db.h"
-}
 
-#include "wx/wx.h"
 #include "wx/listctrl.h"
-#include "app.h"
-#include "frame.h"
 #include "art/home.xpm"
 #include "art/back.xpm"
 #include "art/forward.xpm"

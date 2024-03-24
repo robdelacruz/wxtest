@@ -1,10 +1,4 @@
-extern "C" {
-#include "clib.h"
-#include "db.h"
-}
-#include "wx/wx.h"
-#include "app.h"
-#include "frame.h"
+#include "all.h"
 
 DECLARE_APP(MyApp)
 IMPLEMENT_APP(MyApp)

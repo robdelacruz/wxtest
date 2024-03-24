@@ -1,3 +1,6 @@
+#ifndef APP_H
+#define APP_H
+
 #include "wx/wx.h"
 
 class MyApp : public wxApp {
@@ -7,3 +10,4 @@ public:
 
 DECLARE_APP(MyApp);
 
+#endif
