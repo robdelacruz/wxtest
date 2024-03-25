@@ -34,8 +34,8 @@ int exp_is_valid(exp_t *xp);
 
 int file_exists(char *file);
 int create_tmp_expense_file(str_t *retdbfile, sqlite3 **pdb, str_t *err);
-int create_expense_file(char *dbfile, sqlite3 **pdb, str_t *err);
-int open_expense_file(char *dbfile, sqlite3 **pdb, str_t *err);
+int create_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err);
+int open_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err);
 
 int db_select_cat(sqlite3 *db, array_t *cats);
 int db_find_cat_by_id(sqlite3 *db, uint64_t catid, cat_t *cat);
@@ -43,7 +43,7 @@ int db_add_cat(sqlite3 *db, cat_t *cat);
 int db_edit_cat(sqlite3 *db, cat_t *cat);
 int db_del_cat(sqlite3 *db, uint catid);
 
-int db_select_exp(sqlite3 *db, array_t *xps);
+int db_select_exp(sqlite3 *db, const char *min_date, const char * max_date, array_t *xps);
 int db_add_exp(sqlite3 *db, exp_t *xp);
 int db_edit_exp(sqlite3 *db, exp_t *xp);
 int db_del_exp(sqlite3 *db, uint expid);

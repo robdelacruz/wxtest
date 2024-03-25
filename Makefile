@@ -1,6 +1,6 @@
 CC=gcc
 CXX=g++
-CSOURCES=db.c clib.c
+CSOURCES=db.c clib.c expense.c
 CPPSOURCES=App.cpp Frame.cpp
 COBJECTS=$(patsubst %.c, %.o, $(CSOURCES))
 CPPOBJECTS=$(patsubst %.cpp, %.o, $(CPPSOURCES))
@@ -23,10 +23,10 @@ dep:
 sqlite3.o: sqlite3/sqlite3.c
 	$(CC) -c -o $@ $<
 
-%.o: %.c
-	$(CXX) -c $(CPPFLAGS) -o $@ $<
+#%.o: %.c
+#	$(CXX) -c $(CPPFLAGS) -o $@ $<
 
-%.o: %.cpp
+%.o: %.c*
 	$(CXX) -c $(CPPFLAGS) -o $@ $<
 
 t: $(OBJECTS)

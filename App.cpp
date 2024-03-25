@@ -5,11 +5,22 @@ IMPLEMENT_APP(MyApp)
 
 bool MyApp::OnInit() {
     MyFrame *frame;
+    str_t *err = str_new(0);
+
+    m_expctx = ctx_open_expense_file("abc.db", err);
+    if (m_expctx == NULL) {
+        quit(err->s);
+    }
+    str_free(err);
 
     frame = new MyFrame(wxT("MyFrame"));
     frame->Show(true);
 
     return true;
+}
+
+ExpenseContext *getContext() {
+    return wxGetApp().m_expctx;
 }
 
 #if 0

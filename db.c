@@ -104,7 +104,7 @@ int create_tmp_expense_file(str_t *retdbfile, sqlite3 **pdb, str_t *err) {
     return create_expense_file(fmt, pdb, err);
 }
 
-int create_expense_file(char *dbfile, sqlite3 **pdb, str_t *err) {
+int create_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err) {
     struct stat st;
     sqlite3 *db;
     int z;
@@ -134,7 +134,7 @@ int create_expense_file(char *dbfile, sqlite3 **pdb, str_t *err) {
     return 0;
 }
 
-int open_expense_file(char *dbfile, sqlite3 **pdb, str_t *err) {
+int open_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err) {
     sqlite3 *db;
     int z;
 
@@ -347,21 +347,31 @@ int db_del_cat(sqlite3 *db, uint catid) {
     return 0;
 }
 
-int db_select_exp(sqlite3 *db, array_t *xps) {
+int db_select_exp(sqlite3 *db, const char *min_date, const char * max_date, array_t *xps) {
     exp_t *xp;
     sqlite3_stmt *stmt;
     const char *s;
     int z;
 
+    //$$ Optimize this to eliminate WHERE when no min_date/max_date given.
+    if (min_date == NULL)
+        min_date = "0000-01-01";
+    if (max_date == NULL)
+        max_date = "3000-01-01";
+
     s = "SELECT exp_id, date, desc, amt, exp.cat_id, IFNULL(cat.name, '') "
         "FROM exp "
         "LEFT OUTER JOIN cat ON exp.cat_id = cat.cat_id "
-        "WHERE 1=1 ";
+        "WHERE date >= ? AND date < ?";
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
         return 1;
     }
+    z = sqlite3_bind_text(stmt, 1, min_date, -1, NULL);
+    assert(z == 0);
+    z = sqlite3_bind_text(stmt, 2, max_date, -1, NULL);
+    assert(z == 0);
 
     array_clear(xps);
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
