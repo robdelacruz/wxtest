@@ -1,7 +1,10 @@
 CC=gcc
 CXX=g++
-SOURCES=app.cpp frame.cpp
-OBJECTS=$(SOURCES:.cpp=.o) sqlite3.o
+CSOURCES=db.c clib.c
+CPPSOURCES=App.cpp Frame.cpp
+COBJECTS=$(patsubst %.c, %.o, $(CSOURCES))
+CPPOBJECTS=$(patsubst %.cpp, %.o, $(CPPSOURCES))
+OBJECTS=$(COBJECTS) $(CPPOBJECTS) sqlite3.o
 
 # wx-config --cxxflags --libs
 WX_CXXFLAGS=-I/usr/local/lib/wx/include/gtk3-unicode-static-3.3 -I/usr/local/include/wx-3.3 -D_FILE_OFFSET_BITS=64 -D__WXGTK__ -pthread
@@ -11,7 +14,7 @@ CPPFLAGS=-Wall -Werror -g -Wno-deprecated-declarations #-fpermissive -Werror=wri
 CPPFLAGS+= $(WX_CXXFLAGS)
 LDFLAGS=$(WX_LIBS)
 
-.SILENT:
+#.SILENT:
 all: t
 
 dep:
@@ -19,6 +22,9 @@ dep:
 
 sqlite3.o: sqlite3/sqlite3.c
 	$(CC) -c -o $@ $<
+
+%.o: %.c
+	$(CXX) -c $(CPPFLAGS) -o $@ $<
 
 %.o: %.cpp
 	$(CXX) -c $(CPPFLAGS) -o $@ $<

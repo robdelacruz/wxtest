@@ -1,24 +1,18 @@
-#include "all.h"
+#include "App.h"
+#include "Frame.h"
 
-DECLARE_APP(MyApp)
 IMPLEMENT_APP(MyApp)
-
-static int readArgs(sqlite3 **retdb, str_t *retdbfile);
 
 bool MyApp::OnInit() {
     MyFrame *frame;
-    sqlite3 *db;
-    str_t *dbfile = str_new(0);
 
-    if (readArgs(&db, dbfile) != 0)
-        return false;
-
-    frame = new MyFrame(wxT("MyFrame"), db, dbfile->s);
+    frame = new MyFrame(wxT("MyFrame"));
     frame->Show(true);
 
     return true;
 }
 
+#if 0
 static int readArgs(sqlite3 **retdb, str_t *retdbfile) {
     int z;
     sqlite3 *db = NULL;
@@ -81,5 +75,5 @@ exit_error:
     str_assign(retdbfile, (char*)"");
     return 1;
 }
-
+#endif
 

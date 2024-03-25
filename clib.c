@@ -1,4 +1,7 @@
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,36 +24,36 @@ void print_error(const char *s) {
     else
         fprintf(stderr, "%s\n", strerror(errno));
 }
-void panic(char *s) {
+void panic(const char *s) {
     if (s)
         fprintf(stderr, "%s\n", s);
     abort();
 }
-void panic_err(char *s) {
+void panic_err(const char *s) {
     if (s)
         fprintf(stderr, "%s: %s\n", s, strerror(errno));
     abort();
 }
 
 date_t *date_new(time_t t) {
-    date_t *dt = malloc(sizeof(date_t));
-    dt->tm = malloc(sizeof(struct tm));
+    date_t *dt = (date_t*) malloc(sizeof(date_t));
+    dt->tm = (tm*) malloc(sizeof(struct tm));
 
     dt->time = t;
     localtime_r(&dt->time, dt->tm);
     return dt;
 }
 date_t *date_new_today() {
-    date_t *dt = malloc(sizeof(date_t));
-    dt->tm = malloc(sizeof(struct tm));
+    date_t *dt = (date_t*) malloc(sizeof(date_t));
+    dt->tm = (tm*) malloc(sizeof(struct tm));
 
     dt->time = time(NULL);
     localtime_r(&dt->time, dt->tm);
     return dt;
 }
 date_t *date_new_cal(uint year, uint month, uint day) {
-    date_t *dt = malloc(sizeof(date_t));
-    dt->tm = malloc(sizeof(struct tm));
+    date_t *dt = (date_t*) malloc(sizeof(date_t));
+    dt->tm = (tm*) malloc(sizeof(struct tm));
 
     if (date_assign_cal(dt, year, month, day) != 0) {
         dt->time = time(NULL);
@@ -59,8 +62,8 @@ date_t *date_new_cal(uint year, uint month, uint day) {
     return dt;
 }
 date_t *date_new_iso(char *isodate) {
-    date_t *dt = malloc(sizeof(date_t));
-    dt->tm = malloc(sizeof(struct tm));
+    date_t *dt = (date_t*) malloc(sizeof(date_t));
+    dt->tm = (tm*) malloc(sizeof(struct tm));
 
     if (date_assign_iso(dt, isodate) != 0) {
         dt->time = time(NULL);
@@ -204,9 +207,9 @@ void *arena_alloc(arena_t *a, uint64_t size) {
     if (a->pos + size > a->cap)
         panic("arena_alloc() not enough memory");
 
-    void *p = a->base + a->pos;
+    char *p = (char*)a->base + a->pos;
     a->pos += size;
-    return p;
+    return (void*) p;
 }
 
 void arena_reset(arena_t *a) {
@@ -219,8 +222,8 @@ str_t *str_new(size_t cap) {
     if (cap == 0)
         cap = SIZE_SMALL;
 
-    str = malloc(sizeof(str_t));
-    str->s = malloc(cap);
+    str = (str_t*) malloc(sizeof(str_t));
+    str->s = (char*) malloc(cap);
     memset(str->s, 0, cap);
     str->len = 0;
     str->cap = cap;
@@ -232,18 +235,18 @@ void str_free(str_t *str) {
     free(str->s);
     free(str);
 }
-void str_assign(str_t *str, char *s) {
+void str_assign(str_t *str, const char *s) {
     size_t s_len = strlen(s);
     if (s_len+1 > str->cap) {
         str->cap *= 2;
-        str->s = malloc(str->cap);
+        str->s = (char*) malloc(str->cap);
     }
 
     strncpy(str->s, s, s_len);
     str->s[s_len] = 0;
     str->len = s_len;
 }
-void str_sprintf(str_t *str, char *fmt, ...) {
+void str_sprintf(str_t *str, const char *fmt, ...) {
     char *p = NULL;
     va_list args;
 
@@ -259,8 +262,8 @@ void str_sprintf(str_t *str, char *fmt, ...) {
 array_t *array_new(size_t cap) {
     if (cap == 0)
         cap = 8;
-    array_t *a = malloc(sizeof(array_t));
-    a->items = malloc(sizeof(a->items[0]) * cap);
+    array_t *a = (array_t*) malloc(sizeof(array_t));
+    a->items = (void**) malloc(sizeof(a->items[0]) * cap);
     a->len = 0;
     a->cap = cap;
     return a;
@@ -281,7 +284,7 @@ void array_clear(array_t *a) {
 }
 void array_resize(array_t *a, size_t newcap) {
     assert(newcap > a->cap);
-    void **p = realloc(a->items, newcap * sizeof(void*)); 
+    void **p = (void**) realloc(a->items, newcap * sizeof(void*)); 
     if (p == NULL)
         panic("array_realloc() out of memory\n");
     a->items = p;
@@ -294,7 +297,7 @@ void array_add(array_t *a, void *p) {
     a->len++;
 }
 void array_del(array_t *a, uint idx) {
-    for (int i=idx; i < a->len-1; i++) {
+    for (size_t i=idx; i < a->len-1; i++) {
         a->items[i] = a->items[i+1];
     }
     a->len--;

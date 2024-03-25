@@ -9,19 +9,19 @@
 #include "db.h"
 #include "sqlite3/sqlite3.h"
 
-static void db_print_err(sqlite3 *db, char *sql) {
+static void db_print_err(sqlite3 *db, const char *sql) {
     fprintf(stderr, "SQL: %s\nError: %s\n", sql, sqlite3_errmsg(db));
 }
-static void db_handle_err(sqlite3 *db, sqlite3_stmt *stmt, char *sql) {
+static void db_handle_err(sqlite3 *db, sqlite3_stmt *stmt, const char *sql) {
     db_print_err(db, sql);
     sqlite3_finalize(stmt);
 }
-static int prepare_sql(sqlite3 *db, char *sql, sqlite3_stmt **stmt) {
+static int prepare_sql(sqlite3 *db, const char *sql, sqlite3_stmt **stmt) {
     return sqlite3_prepare_v2(db, sql, -1, stmt, 0);
 }
 static int db_is_database_file(sqlite3 *db) {
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
 
     s = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='(any)'";
@@ -33,7 +33,7 @@ static int db_is_database_file(sqlite3 *db) {
 }
 static int db_is_tables_exist(sqlite3 *db) {
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
 
     s = "SELECT * FROM sqlite_master WHERE type='table' AND name='cat'";
@@ -62,7 +62,7 @@ static int db_is_tables_exist(sqlite3 *db) {
     return 1;
 }
 static int db_init_tables(sqlite3 *db, str_t *err) {
-    char *s;
+    const char *s;
     char *serr;
     int z;
 
@@ -89,10 +89,10 @@ int file_exists(char *file) {
 }
 
 int create_tmp_expense_file(str_t *retdbfile, sqlite3 **pdb, str_t *err) {
-    char template[] = "/tmp/expXXXXXX";
+    char fmt[] = "/tmp/expXXXXXX";
     int fd;
 
-    fd = mkstemp(template);
+    fd = mkstemp(fmt);
     if (fd == -1) {
         if (err != NULL)
             str_assign(err, strerror(errno));
@@ -100,8 +100,8 @@ int create_tmp_expense_file(str_t *retdbfile, sqlite3 **pdb, str_t *err) {
     }
     close(fd);
 
-    str_assign(retdbfile, template);
-    return create_expense_file(template, pdb, err);
+    str_assign(retdbfile, fmt);
+    return create_expense_file(fmt, pdb, err);
 }
 
 int create_expense_file(char *dbfile, sqlite3 **pdb, str_t *err) {
@@ -165,7 +165,7 @@ int open_expense_file(char *dbfile, sqlite3 **pdb, str_t *err) {
 }
 
 cat_t *cat_new() {
-    cat_t *cat = malloc(sizeof(cat_t));
+    cat_t *cat = (cat_t*) malloc(sizeof(cat_t));
     cat->catid = 0;
     cat->name = str_new(15);
     return cat;
@@ -184,7 +184,7 @@ int cat_is_valid(cat_t *cat) {
 }
 
 exp_t *exp_new() {
-    exp_t *xp = malloc(sizeof(exp_t));
+    exp_t *xp = (exp_t*) malloc(sizeof(exp_t));
     xp->expid = 0;
     xp->date = date_new_today();
     xp->desc = str_new(0);
@@ -224,7 +224,7 @@ int exp_is_valid(exp_t *xp) {
 
 int db_find_cat_by_id(sqlite3 *db, uint64_t catid, cat_t *cat) {
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
 
     cat->catid = 0;
@@ -254,7 +254,7 @@ int db_find_cat_by_id(sqlite3 *db, uint64_t catid, cat_t *cat) {
 int db_select_cat(sqlite3 *db, array_t *cats) {
     cat_t *cat;
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
 
     s = "SELECT cat_id, name FROM cat WHERE 1=1";
@@ -280,7 +280,7 @@ int db_select_cat(sqlite3 *db, array_t *cats) {
 }
 int db_add_cat(sqlite3 *db, cat_t *cat) {
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
 
     s = "INSERT INTO cat (name) VALUES (?);";
@@ -302,7 +302,7 @@ int db_add_cat(sqlite3 *db, cat_t *cat) {
 }
 int db_edit_cat(sqlite3 *db, cat_t *cat) {
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
 
     s = "UPDATE cat SET name = ? WHERE cat_id = ?";
@@ -326,7 +326,7 @@ int db_edit_cat(sqlite3 *db, cat_t *cat) {
 }
 int db_del_cat(sqlite3 *db, uint catid) {
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
 
     s = "DELETE FROM cat WHERE cat_id = ?";
@@ -350,7 +350,7 @@ int db_del_cat(sqlite3 *db, uint catid) {
 int db_select_exp(sqlite3 *db, array_t *xps) {
     exp_t *xp;
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
 
     s = "SELECT exp_id, date, desc, amt, exp.cat_id, IFNULL(cat.name, '') "
@@ -384,7 +384,7 @@ int db_select_exp(sqlite3 *db, array_t *xps) {
 }
 int db_add_exp(sqlite3 *db, exp_t *xp) {
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
     char isodate[ISO_DATE_LEN+1];
 
@@ -414,7 +414,7 @@ int db_add_exp(sqlite3 *db, exp_t *xp) {
 }
 int db_edit_exp(sqlite3 *db, exp_t *xp) {
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
     char isodate[ISO_DATE_LEN+1];
 
@@ -446,7 +446,7 @@ int db_edit_exp(sqlite3 *db, exp_t *xp) {
 }
 int db_del_exp(sqlite3 *db, uint expid) {
     sqlite3_stmt *stmt;
-    char *s;
+    const char *s;
     int z;
 
     s = "DELETE FROM exp WHERE exp_id = ?";

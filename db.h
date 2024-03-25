@@ -1,6 +1,10 @@
 #ifndef EXP_H
 #define EXP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "clib.h"
 #include "sqlite3/sqlite3.h"
 
@@ -43,5 +47,9 @@ int db_select_exp(sqlite3 *db, array_t *xps);
 int db_add_exp(sqlite3 *db, exp_t *xp);
 int db_edit_exp(sqlite3 *db, exp_t *xp);
 int db_del_exp(sqlite3 *db, uint expid);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

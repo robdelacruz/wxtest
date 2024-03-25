@@ -1,6 +1,10 @@
 #ifndef CLIB_H
 #define CLIB_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -43,8 +47,8 @@ typedef struct {
 
 void quit(const char *s);
 void print_error(const char *s);
-void panic(char *s);
-void panic_err(char *s);
+void panic(const char *s);
+void panic_err(const char *s);
 
 typedef void *(allocfn_t)(size_t size);
 arena_t new_arena(uint64_t cap);
@@ -54,8 +58,8 @@ void arena_reset(arena_t *a);
 
 str_t *str_new(size_t cap);
 void str_free(str_t *str);
-void str_assign(str_t *str, char *s);
-void str_sprintf(str_t *str, char *fmt, ...);
+void str_assign(str_t *str, const char *s);
+void str_sprintf(str_t *str, const char *fmt, ...);
 
 date_t *date_new(time_t t);
 date_t *date_new_today();
@@ -83,5 +87,9 @@ void array_del(array_t *a, uint idx);
 
 typedef int (*sort_compare_func_t)(void *a, void *b);
 void sort_array(void *array[], size_t array_len, sort_compare_func_t cmpfunc);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

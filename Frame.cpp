@@ -1,7 +1,6 @@
-#include "all.h"
 #include <stdio.h>
 
-#include "wx/listctrl.h"
+#include "Frame.h"
 #include "art/home.xpm"
 #include "art/back.xpm"
 #include "art/forward.xpm"
@@ -14,24 +13,13 @@ BEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_LIST_ITEM_ACTIVATED(wxID_ANY, MyFrame::OnListItemActivated)
 END_EVENT_TABLE()
 
-MyFrame::MyFrame(const wxString& title, sqlite3 *db, char *dbfile) : wxFrame(NULL, wxID_ANY, title) {
+MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title) {
     wxMenuBar *menubar;
     wxMenu *fileMenu;
     wxListView *lv;
     wxBitmapButton *btnPrevMonth, *btnNextMonth;
     wxBoxSizer *vbox;
     wxBoxSizer *hbox;
-    array_t *xps;
-    array_t *cats;
-    char bufdate[ISO_DATE_LEN+1];
-    char bufamt[12];
-
-    m_db = db;
-    m_dbfile = str_new(0);
-    if (dbfile)
-        str_assign(m_dbfile, dbfile);
-    xps = array_new(0);
-    cats = array_new(0);
 
     SetIcon(wxIcon(home_xpm));
 
@@ -52,18 +40,6 @@ MyFrame::MyFrame(const wxString& title, sqlite3 *db, char *dbfile) : wxFrame(NUL
     lv->AppendColumn("Amount");
     lv->AppendColumn("Category");
 
-    db_select_exp(m_db, xps);
-    db_select_cat(m_db, cats);
-
-    for (uint i=0; i < xps->len; i++) {
-        exp_t *xp = (exp_t*)xps->items[i];
-        date_strftime(xp->date, (char*)"%m-%d", bufdate, sizeof(bufdate));
-        lv->InsertItem(i, bufdate);
-        lv->SetItem(i, 1, xp->desc->s);
-        snprintf(bufamt, sizeof(bufamt), "%9.2f", xp->amt);
-        lv->SetItem(i, 2, bufamt);
-        lv->SetItem(i, 3, xp->catname->s);
-    }
     for (int col=0; col <= 3; col++)
         lv->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
 
