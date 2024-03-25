@@ -23,6 +23,7 @@ static void ctx_set_current_date(ExpenseContext *ctx) {
 static ExpenseContext *create_empty_ctx() {
     ExpenseContext *ctx = (ExpenseContext*) malloc(sizeof(ExpenseContext));
     ctx->expfile = str_new(0);
+    ctx->expfiledb = NULL;
     ctx_set_current_date(ctx);
     ctx->xps = array_new(0);
     ctx->cats = array_new(0);
@@ -36,8 +37,6 @@ ExpenseContext *ctx_create_expense_file(const char *filename, str_t *err) {
 
     z = create_expense_file(filename, &expfiledb, err);
     if (z != 0) {
-        if (err != NULL)
-            fprintf(stderr, "Error creating '%s': %s\n", filename, err->s);
         return NULL;
     }
 
@@ -57,8 +56,6 @@ ExpenseContext *ctx_open_expense_file(const char *filename, str_t *err) {
 
     z = open_expense_file(filename, &expfiledb, err);
     if (z != 0) {
-        if (err != NULL)
-            fprintf(stderr, "Error opening '%s': %s\n", filename, err->s);
         return NULL;
     }
 
@@ -69,6 +66,38 @@ ExpenseContext *ctx_open_expense_file(const char *filename, str_t *err) {
     if (err != NULL)
         str_assign(err, "");
     return ctx;
+}
+
+ExpenseContext *ctx_init_args(int argc, char **argv) {
+    const char *expfile = NULL;
+
+    if (argc <= 1)
+        return create_empty_ctx();
+
+    for (int i=1; i < argc; i++) {
+        char *arg = argv[i];
+
+        // <program> create <expense file>
+        if (strcmp(arg, "create") == 0) {
+            if (i == argc-1) {
+                printf("Usage:\n%s create <expense file>\n", argv[0]);
+                return NULL;
+            }
+            expfile = argv[i+1];
+            return ctx_create_expense_file(expfile, NULL);
+        }
+
+        // <program> <expense file>
+        expfile = arg;
+        break;
+    }
+
+    assert(expfile != NULL);
+    if (!file_exists(expfile)) {
+        printf("File '%s' doesn't exist.\n", expfile);
+        return NULL;
+    }
+    return ctx_open_expense_file(expfile, NULL);
 }
 
 void ctx_close(ExpenseContext *ctx) {

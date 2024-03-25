@@ -32,7 +32,7 @@ void exp_free(exp_t *xp);
 void exp_dup(sqlite3 *db, exp_t *dest, exp_t *src);
 int exp_is_valid(exp_t *xp);
 
-int file_exists(char *file);
+int file_exists(const char *file);
 int create_tmp_expense_file(str_t *retdbfile, sqlite3 **pdb, str_t *err);
 int create_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err);
 int open_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err);

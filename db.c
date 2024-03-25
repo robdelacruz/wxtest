@@ -81,7 +81,7 @@ static int db_init_tables(sqlite3 *db, str_t *err) {
     return 0;
 }
 
-int file_exists(char *file) {
+int file_exists(const char *file) {
     struct stat st;
     if (stat(file, &st) == 0)
         return 1;
@@ -137,6 +137,12 @@ int create_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err) {
 int open_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err) {
     sqlite3 *db;
     int z;
+
+    if (!file_exists(dbfile)) {
+        if (err != NULL)
+            str_assign(err, "File doesn't exist");
+        return 1;
+    }
 
     z = sqlite3_open(dbfile, pdb);
     db = *pdb;
