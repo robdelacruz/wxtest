@@ -37,58 +37,42 @@ void panic_err(const char *s) {
 
 date_t *date_new(time_t t) {
     date_t *dt = (date_t*) malloc(sizeof(date_t));
-    dt->tm = (tm*) malloc(sizeof(struct tm));
 
     dt->time = t;
-    localtime_r(&dt->time, dt->tm);
+    localtime_r(&dt->time, &dt->tm);
     return dt;
 }
 date_t *date_new_today() {
     date_t *dt = (date_t*) malloc(sizeof(date_t));
-    dt->tm = (tm*) malloc(sizeof(struct tm));
 
     dt->time = time(NULL);
-    localtime_r(&dt->time, dt->tm);
+    localtime_r(&dt->time, &dt->tm);
     return dt;
 }
 date_t *date_new_cal(uint year, uint month, uint day) {
     date_t *dt = (date_t*) malloc(sizeof(date_t));
-    dt->tm = (tm*) malloc(sizeof(struct tm));
 
     if (date_assign_cal(dt, year, month, day) != 0) {
         dt->time = time(NULL);
-        localtime_r(&dt->time, dt->tm);
+        localtime_r(&dt->time, &dt->tm);
     }
     return dt;
 }
 date_t *date_new_iso(char *isodate) {
     date_t *dt = (date_t*) malloc(sizeof(date_t));
-    dt->tm = (tm*) malloc(sizeof(struct tm));
 
     if (date_assign_iso(dt, isodate) != 0) {
         dt->time = time(NULL);
-        localtime_r(&dt->time, dt->tm);
+        localtime_r(&dt->time, &dt->tm);
     }
     return dt;
 }
 void date_free(date_t *dt) {
-    free(dt->tm);
     free(dt);
-}
-static void date_dup_tm(struct tm *dest, struct tm *src) {
-    dest->tm_sec = src->tm_sec;
-    dest->tm_min = src->tm_min;
-    dest->tm_hour = src->tm_hour;
-    dest->tm_mday = src->tm_mday;
-    dest->tm_mon = src->tm_mon;
-    dest->tm_year = src->tm_year;
-    dest->tm_wday = src->tm_wday;
-    dest->tm_yday = src->tm_yday;
-    dest->tm_isdst = src->tm_isdst;
 }
 void date_assign_time(date_t *dt, time_t time) {
     dt->time = time;
-    localtime_r(&dt->time, dt->tm);
+    localtime_r(&dt->time, &dt->tm);
 }
 int date_assign_cal(date_t *dt, uint year, uint month, uint day) {
     time_t time;
@@ -105,7 +89,7 @@ int date_assign_cal(date_t *dt, uint year, uint month, uint day) {
     }
 
     dt->time = time;
-    date_dup_tm(dt->tm, &tm);
+    dt->tm = tm;
     return 0;
 }
 int date_assign_iso(date_t *dt, char *isodate) {
@@ -124,65 +108,57 @@ int date_assign_iso(date_t *dt, char *isodate) {
     }
 
     dt->time = time;
-    date_dup_tm(dt->tm, &tm);
+    dt->tm = tm;
     return 0;
 }
 void date_to_iso(date_t *dt, char *buf, size_t buf_len) {
-    strftime(buf, buf_len, "%F", dt->tm);
+    strftime(buf, buf_len, "%F", &dt->tm);
 }
 void date_strftime(date_t *dt, char *fmt, char *buf, size_t buf_len) {
-    strftime(buf, buf_len, fmt, dt->tm);
+    strftime(buf, buf_len, fmt, &dt->tm);
 }
 void date_dup(date_t *dest, date_t *src) {
     dest->time = src->time;
-    date_dup_tm(dest->tm, src->tm);
+    dest->tm = src->tm;
 }
 time_t date_time(date_t *dt) {
     return dt->time;
 }
 int date_year(date_t *dt) {
-    return dt->tm->tm_year + 1900;
+    return dt->tm.tm_year + 1900;
 }
 int date_month(date_t *dt) {
-    return dt->tm->tm_mon+1;
+    return dt->tm.tm_mon+1;
 }
 int date_day(date_t *dt) {
-    return dt->tm->tm_mday;
+    return dt->tm.tm_mday;
 }
+void date_set_prev_month(date_t *dt) {
+    if (dt->tm.tm_year == 0)
+        return;
 
-#if 0
-date_t date_from_iso(char *s) {
-    char buf[11];
-    uint month, day, year;
-
-    // s should be yyyy-mm-dd format
-    if (strlen(s) != 10)
-        goto error;
-    if (s[4] != '-' && s[7] != '-')
-        goto error;
-
-    strcpy(buf, s);
-    buf[4] = 0;
-    buf[7] = 0;
-    year = atoi(buf+0);
-    month = atoi(buf+5);
-    day = atoi(buf+8);
-
-    if (!is_valid_date(month, day, year))
-        goto error;
-
-    date_t dt = {.year = year, .month = month, .day = day};
-    return dt;
-
-error:
-    return date_zero();
+    dt->tm.tm_mon--;
+    if (dt->tm.tm_mon < 0) {
+        dt->tm.tm_mon = 11;
+        dt->tm.tm_year--;
+    }
 }
-
-void date_to_iso(date_t dt, char buf[], size_t buf_len) {
-    // 1900-01-01
-    snprintf(buf, buf_len, "%04d-%02d-%02d", dt.year, dt.month, dt.day);
+void date_set_next_month(date_t *dt) {
+    dt->tm.tm_mon++;
+    if (dt->tm.tm_mon > 11) {
+        dt->tm.tm_mon = 0;
+        dt->tm.tm_year++;
+    }
 }
-#endif
+void date_set_year(date_t *dt, int year) {
+    date_assign_cal(dt, year, date_month(dt), date_day(dt));
+}
+void date_set_month(date_t *dt, int month) {
+    date_assign_cal(dt, date_year(dt), month, date_day(dt));
+}
+void date_set_day(date_t *dt, int day) {
+    date_assign_cal(dt, date_year(dt), date_month(dt), day);
+}
 
 arena_t new_arena(uint64_t cap) {
     arena_t a; 

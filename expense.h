@@ -7,8 +7,8 @@
 typedef struct {
     str_t *expfile;
     sqlite3 *expfiledb;
-    int month;
-    int year;
+    date_t *dt;
+    date_t *dttmp;
     array_t *xps;
     array_t *cats;
 } ExpenseContext;
@@ -20,5 +20,6 @@ void ctx_close(ExpenseContext *ctx);
 
 int ctx_refresh_categories(ExpenseContext *ctx);
 int ctx_refresh_expenses(ExpenseContext *ctx, int year, int month);
+int ctx_is_open_expfile(ExpenseContext *ctx);
 
 #endif

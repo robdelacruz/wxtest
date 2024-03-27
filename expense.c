@@ -10,23 +10,19 @@
 #include "db.h"
 #include "expense.h"
 
-static void ctx_set_current_date(ExpenseContext *ctx) {
-    time_t timenow;
-    struct tm tmnow;
-
-    timenow = time(NULL);
-    localtime_r(&timenow, &tmnow);
-    ctx->month = tmnow.tm_mon+1;
-    ctx->year = tmnow.tm_year + 1990;
-}
-
 static ExpenseContext *create_empty_ctx() {
     ExpenseContext *ctx = (ExpenseContext*) malloc(sizeof(ExpenseContext));
     ctx->expfile = str_new(0);
     ctx->expfiledb = NULL;
-    ctx_set_current_date(ctx);
     ctx->xps = array_new(0);
     ctx->cats = array_new(0);
+
+    ctx->dt = date_new_today();
+    date_set_day(ctx->dt, 1);
+    ctx->dttmp = date_new_today();
+    date_dup(ctx->dttmp, ctx->dt);
+    date_set_next_month(ctx->dttmp);
+
     return ctx;
 }
 
@@ -103,6 +99,8 @@ ExpenseContext *ctx_init_args(int argc, char **argv) {
 void ctx_close(ExpenseContext *ctx) {
     str_free(ctx->expfile);
     sqlite3_close_v2(ctx->expfiledb);
+    date_free(ctx->dt);
+    date_free(ctx->dttmp);
     array_free(ctx->xps);
     array_free(ctx->cats);
     free(ctx);
@@ -112,34 +110,41 @@ int ctx_refresh_categories(ExpenseContext *ctx) {
     return db_select_cat(ctx->expfiledb, ctx->cats);
 }
 
+// Updates the current year and month and queries expenses occuring on the year and month.
+// To leave the year/month unchanged, pass -1 or a value outside the valid range.
+//
+// Ex.
+//   ctx_refresh_expenses(ctx, -1, 3)    // set month to March, year is unchanged
+//   ctx_refresh_expenses(ctx, 2023, -1) // set year to 2023, month is unchanged
+//   ctx_refresh_expenses(ctx, 2023, 3)  // set year/month to 2023 March
+//   ctx_refresh_expenses(ctx, 1899, 0)  // outside the valid ranges, year/month unchanged
+//
 int ctx_refresh_expenses(ExpenseContext *ctx, int year, int month) {
     char min_date[ISO_DATE_LEN+1];
     char max_date[ISO_DATE_LEN+1];
-    struct tm tm;
-    int z;
 
-    assert(year >= 1900);
-    assert(month >= 1 && month <= 12);
+    if (year >= 1900)
+        date_set_year(ctx->dt, year);
+    if (month >= 1 && month <= 12)
+        date_set_month(ctx->dt, month);
+    date_set_day(ctx->dt, 1);
 
     // Generate date range for min_date <= data < max_date
     // Given year=2024, month=3
     // min_date = "2024-03-01"
     // max_date = "2024-04-01"
 
-    memset(&tm, 0, sizeof(struct tm));
-    tm.tm_year = year-1900;
-    tm.tm_mon = month-1;
-    tm.tm_mday = 1;
-    strftime(min_date, sizeof(min_date), "%F", &tm);
+    date_dup(ctx->dttmp, ctx->dt);
+    date_set_next_month(ctx->dttmp);
+    date_to_iso(ctx->dt, min_date, sizeof(min_date));
+    date_to_iso(ctx->dttmp, max_date, sizeof(max_date));
 
-    tm.tm_mon++;
-    if (tm.tm_mon > 11) {
-        tm.tm_mon = 0;
-        tm.tm_year++;
-    }
-    strftime(max_date, sizeof(max_date), "%F", &tm);
+    return db_select_exp(ctx->expfiledb, min_date, max_date, ctx->xps);
+}
 
-    z = db_select_exp(ctx->expfiledb, min_date, max_date, ctx->xps);
-    return z;
+int ctx_is_open_expfile(ExpenseContext *ctx) {
+    if (ctx->expfile->len > 0 && ctx->expfiledb != NULL)
+        return 1;
+    return 0;
 }
 

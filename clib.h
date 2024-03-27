@@ -36,7 +36,7 @@ typedef struct {
 
 typedef struct {
     time_t time;
-    struct tm *tm;
+    struct tm tm;
 } date_t;
 
 typedef struct {
@@ -76,6 +76,11 @@ time_t date_time(date_t *dt);
 int date_year(date_t *dt);
 int date_month(date_t *dt);
 int date_day(date_t *dt);
+void date_set_prev_month(date_t *dt);
+void date_set_next_month(date_t *dt);
+void date_set_year(date_t *dt, int year);
+void date_set_month(date_t *dt, int month);
+void date_set_day(date_t *dt, int day);
 
 array_t *array_new(size_t cap);
 void array_free(array_t *a);
