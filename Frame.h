@@ -9,16 +9,21 @@ public:
     MyFrame(const wxString& title);
     void OnFileNew(wxCommandEvent& event);
     void OnFileOpen(wxCommandEvent& event);
+    void OnFileClose(wxCommandEvent& event);
     void OnFileExit(wxCommandEvent& event);
 
     void OnPrevMonth(wxCommandEvent& event);
     void OnNextMonth(wxCommandEvent& event);
     void OnListItemActivated(wxListEvent& event);
 
+    void RefreshFrame();
     void RefreshExpenses();
 
 private:
     DECLARE_EVENT_TABLE()
+
+//    wxMenu *m_fileMenu;
+//    wxMenu *m_expenseMenu;
 };
 
 #endif

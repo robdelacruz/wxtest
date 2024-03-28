@@ -2,6 +2,7 @@
 
 #include "wx/wx.h"
 #include "wx/window.h"
+#include "wx/filename.h"
 #include "App.h"
 #include "Frame.h"
 #include "db.h"
@@ -12,20 +13,25 @@
 #define ID_PREV_MONTH 101
 #define ID_NEXT_MONTH 102
 #define ID_EXPENSES_LIST 103
-#define ID_FRAME_TITLE 104
+#define ID_EXPENSES_HEADING 104
+#define ID_EXPENSE_NEW 105
+#define ID_EXPENSE_EDIT 106
+#define ID_EXPENSE_DEL 107
 
 BEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(wxID_NEW, MyFrame::OnFileNew)
     EVT_MENU(wxID_OPEN, MyFrame::OnFileOpen)
+    EVT_MENU(wxID_CLOSE, MyFrame::OnFileClose)
     EVT_MENU(wxID_EXIT, MyFrame::OnFileExit)
     EVT_BUTTON(ID_PREV_MONTH, MyFrame::OnPrevMonth)
     EVT_BUTTON(ID_NEXT_MONTH, MyFrame::OnNextMonth)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnListItemActivated)
 END_EVENT_TABLE()
 
-MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title) {
+MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(640,480)) {
     wxMenuBar *menubar;
     wxMenu *fileMenu;
+    wxMenu *expenseMenu;
     wxListView *lv;
     wxBitmapButton *btnPrevMonth, *btnNextMonth;
     wxBoxSizer *vbox;
@@ -36,10 +42,17 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title) {
     fileMenu = new wxMenu;
     fileMenu->Append(wxID_NEW, wxT("&New\tCtrl-Shift-N"), wxT("New Expense File"));
     fileMenu->Append(wxID_OPEN, wxT("&Open\tCtrl-O"), wxT("Open Expense File"));
+    fileMenu->Append(wxID_CLOSE, wxT("&Close\tCtrl-W"), wxT("Close Expense File"));
     fileMenu->Append(wxID_EXIT, wxT("E&xit\tCtrl-Q"), wxT("Quit program"));
+
+    expenseMenu = new wxMenu;
+    expenseMenu->Append(ID_EXPENSE_NEW, wxT("&New\tCtrl-N"), wxT("New Expense"));
+    expenseMenu->Append(ID_EXPENSE_EDIT, wxT("&Edit\tCtrl-E"), wxT("Edit Expense"));
+    expenseMenu->Append(ID_EXPENSE_DEL, wxT("&Delete\tCtrl-X"), wxT("Delete Expense"));
 
     menubar = new wxMenuBar();
     menubar->Append(fileMenu, wxT("&File"));
+    menubar->Append(expenseMenu, wxT("&Expense"));
     SetMenuBar(menubar);
 
     CreateStatusBar(2);
@@ -62,7 +75,7 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title) {
     hbox = new wxBoxSizer(wxHORIZONTAL);
     hbox->Add(btnPrevMonth, 0, wxEXPAND, 0);
     hbox->AddStretchSpacer();
-    hbox->Add(new wxStaticText(this, ID_FRAME_TITLE, "Expenses"), 0, wxALIGN_CENTER_VERTICAL, 0);
+    hbox->Add(new wxStaticText(this, ID_EXPENSES_HEADING, ""), 0, wxALIGN_CENTER_VERTICAL, 0);
     hbox->AddStretchSpacer();
     hbox->Add(btnNextMonth, 0, wxEXPAND, 0);
 
@@ -70,10 +83,50 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title) {
     vbox->Add(hbox, 0, wxEXPAND|wxTOP|wxBOTTOM, 5);
     vbox->Add(lv, 1, wxEXPAND, 0);
     SetSizer(vbox);
-    vbox->Fit(this);
+//    vbox->Fit(this);
 //    vbox->SetSizeHints(this);
 
+    RefreshFrame();
     RefreshExpenses();
+}
+
+void MyFrame::RefreshFrame() {
+    ExpenseContext *ctx = getContext();
+    wxWindow *lv, *btnPrev, *btnNext;
+    wxStaticText *st;
+    wxString title, filename, ext;
+    wxMenuBar *menubar = GetMenuBar();
+    wxMenu *filemenu;
+
+    st = (wxStaticText *) wxWindow::FindWindowById(ID_EXPENSES_HEADING);
+    lv = wxWindow::FindWindowById(ID_EXPENSES_LIST);
+    btnPrev = wxWindow::FindWindowById(ID_PREV_MONTH);
+    btnNext = wxWindow::FindWindowById(ID_NEXT_MONTH);
+    filemenu = menubar->GetMenu(0);
+
+    // No open expense file
+    if (!ctx_is_open_expfile(ctx)) {
+        SetTitle(wxT("Expense Buddy"));
+        st->SetLabel(wxT("No Expense File"));
+        lv->Show(false);
+        btnPrev->Show(false);
+        btnNext->Show(false);
+
+        filemenu->Enable(wxID_CLOSE, false);
+        menubar->EnableTop(1, false); // Disable Expense menu
+        return;
+    }
+
+    // Expense file opened
+    wxFileName::SplitPath(wxString::FromUTF8(ctx->expfile->s), NULL, NULL, &filename, &ext);
+    title.Printf("Expense Buddy - [%s.%s]", filename, ext);
+    SetTitle(title);
+    lv->Show(true);
+    btnPrev->Show(true);
+    btnNext->Show(true);
+
+    filemenu->Enable(wxID_CLOSE, true);
+    menubar->EnableTop(1, true); // Enable Expense menu
 }
 
 void MyFrame::RefreshExpenses() {
@@ -86,7 +139,7 @@ void MyFrame::RefreshExpenses() {
     if (!ctx_is_open_expfile(ctx))
         return;
 
-    st = (wxStaticText *) wxWindow::FindWindowById(ID_FRAME_TITLE, this);
+    st = (wxStaticText *) wxWindow::FindWindowById(ID_EXPENSES_HEADING, this);
     date_strftime(ctx->dt, "%B %Y", buf, sizeof(buf));
     st->SetLabel(wxString::FromUTF8(buf));
 
@@ -108,26 +161,53 @@ void MyFrame::RefreshExpenses() {
 
 void MyFrame::OnFileNew(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    wxFileDialog *dlg;
-    int z;
+    str_t *err;
 
-    dlg = new wxFileDialog(this, wxT("New Expense File"), wxEmptyString, wxEmptyString, wxFileSelectorDefaultWildcardStr, wxFD_OPEN, wxDefaultPosition, wxDefaultSize);
-    z = dlg->ShowModal();
-    if (z == wxID_OK) {
-        str_t *err = str_new(0);
-        wxString expfile = dlg->GetPath();
-        if (ctx_create_expense_file(ctx, expfile.ToUTF8(), err) != 0) {
-            wxMessageDialog msgdlg(NULL, wxT("Error occured"), wxString::FromUTF8(err->s), wxOK | wxICON_ERROR);
-            msgdlg.ShowModal();
-        }
+    wxFileDialog dlg(this, wxT("New Expense File"), wxEmptyString, wxEmptyString, wxFileSelectorDefaultWildcardStr, wxFD_SAVE, wxDefaultPosition, wxDefaultSize);
+    if (dlg.ShowModal() == wxID_CANCEL)
+        return;
+
+    err = str_new(0);
+    wxString expfile = dlg.GetPath();
+    if (ctx_create_expense_file(ctx, expfile.ToUTF8(), err) != 0) {
+        wxMessageDialog msgdlg(NULL, wxString::FromUTF8(err->s), wxT("Error occured"), wxOK | wxICON_ERROR);
+        msgdlg.ShowModal();
     }
+    str_free(err);
 
-    dlg->Destroy();
+    RefreshFrame();
+    RefreshExpenses();
 }
 void MyFrame::OnFileOpen(wxCommandEvent& event) {
-//    ExpenseContext *ctx = getContext();
+    ExpenseContext *ctx = getContext();
+    str_t *err;
+
+    //wxFileDialog dlg(this, wxT("Open Expense File"), wxEmptyString, wxEmptyString, wxFileSelectorDefaultWildcardStr, wxFD_OPEN, wxDefaultPosition, wxDefaultSize);
+    wxFileDialog dlg(this, wxT("Open Expense File"), wxEmptyString, wxEmptyString, wxT("*.db"), wxFD_OPEN, wxDefaultPosition, wxDefaultSize);
+    if (dlg.ShowModal() == wxID_CANCEL)
+        return;
+
+    err = str_new(0);
+    wxString expfile = dlg.GetPath();
+    if (ctx_open_expense_file(ctx, expfile.ToUTF8(), err) != 0) {
+        wxMessageDialog msgdlg(NULL, wxString::FromUTF8(err->s), wxT("Error occured"), wxOK | wxICON_ERROR);
+        msgdlg.ShowModal();
+    }
+    str_free(err);
+
+    RefreshFrame();
+    RefreshExpenses();
+}
+void MyFrame::OnFileClose(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
+    ctx_close(ctx);
+
+    RefreshFrame();
+    RefreshExpenses();
 }
 void MyFrame::OnFileExit(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
+    ctx_close(ctx);
     Close();
 }
 
