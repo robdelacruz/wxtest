@@ -13,13 +13,15 @@ typedef struct {
     array_t *cats;
 } ExpenseContext;
 
+const char *exp_strerror(int errnum);
+
 ExpenseContext *ctx_new();
 void ctx_free(ExpenseContext *ctx);
 void ctx_close(ExpenseContext *ctx);
 
-int ctx_create_expense_file(ExpenseContext *ctx, const char *filename, str_t *err);
-int ctx_open_expense_file(ExpenseContext *ctx, const char *filename, str_t *err);
-int ctx_init_from_args(ExpenseContext *ctx, int argc, char **argv, str_t *err);
+int ctx_create_expense_file(ExpenseContext *ctx, const char *filename);
+int ctx_open_expense_file(ExpenseContext *ctx, const char *filename);
+int ctx_init_from_args(ExpenseContext *ctx, int argc, char **argv);
 
 int ctx_is_open_expfile(ExpenseContext *ctx);
 void ctx_set_prev_month(ExpenseContext *ctx);

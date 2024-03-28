@@ -159,41 +159,44 @@ void MyFrame::RefreshExpenses() {
     }
 }
 
+static wxString fileErrorString(wxString& file, int errnum) {
+    wxString errstr;
+    errstr.Printf("%s: %s", wxString::FromUTF8(exp_strerror(errnum)), file);
+    return errstr;
+}
+
 void MyFrame::OnFileNew(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    str_t *err;
+    int z;
 
     wxFileDialog dlg(this, wxT("New Expense File"), wxEmptyString, wxEmptyString, wxFileSelectorDefaultWildcardStr, wxFD_SAVE, wxDefaultPosition, wxDefaultSize);
     if (dlg.ShowModal() == wxID_CANCEL)
         return;
 
-    err = str_new(0);
     wxString expfile = dlg.GetPath();
-    if (ctx_create_expense_file(ctx, expfile.ToUTF8(), err) != 0) {
-        wxMessageDialog msgdlg(NULL, wxString::FromUTF8(err->s), wxT("Error occured"), wxOK | wxICON_ERROR);
+    z = ctx_create_expense_file(ctx, expfile.ToUTF8());
+    if (z != 0) {
+        wxMessageDialog msgdlg(NULL, fileErrorString(expfile, z), wxT("Error occured"), wxOK | wxICON_ERROR);
         msgdlg.ShowModal();
     }
-    str_free(err);
 
     RefreshFrame();
     RefreshExpenses();
 }
 void MyFrame::OnFileOpen(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    str_t *err;
+    int z;
 
-    //wxFileDialog dlg(this, wxT("Open Expense File"), wxEmptyString, wxEmptyString, wxFileSelectorDefaultWildcardStr, wxFD_OPEN, wxDefaultPosition, wxDefaultSize);
     wxFileDialog dlg(this, wxT("Open Expense File"), wxEmptyString, wxEmptyString, wxT("*.db"), wxFD_OPEN, wxDefaultPosition, wxDefaultSize);
     if (dlg.ShowModal() == wxID_CANCEL)
         return;
 
-    err = str_new(0);
     wxString expfile = dlg.GetPath();
-    if (ctx_open_expense_file(ctx, expfile.ToUTF8(), err) != 0) {
-        wxMessageDialog msgdlg(NULL, wxString::FromUTF8(err->s), wxT("Error occured"), wxOK | wxICON_ERROR);
+    z = ctx_open_expense_file(ctx, expfile.ToUTF8());
+    if (z != 0) {
+        wxMessageDialog msgdlg(NULL, fileErrorString(expfile, z), wxT("Error occured"), wxOK | wxICON_ERROR);
         msgdlg.ShowModal();
     }
-    str_free(err);
 
     RefreshFrame();
     RefreshExpenses();

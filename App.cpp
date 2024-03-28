@@ -9,7 +9,7 @@ bool MyApp::OnInit() {
     str_t *err = str_new(0);
 
     m_expctx = ctx_new();
-    if (ctx_init_from_args(m_expctx, wxGetApp().argc, wxGetApp().argv, err) != 0) {
+    if (ctx_init_from_args(m_expctx, wxGetApp().argc, wxGetApp().argv) != 0) {
         printf("%s\n", err->s);
         exit(1);
     }

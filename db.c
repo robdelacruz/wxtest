@@ -9,6 +9,8 @@
 #include "db.h"
 #include "sqlite3/sqlite3.h"
 
+int db_sqlite_errno;
+
 static void db_print_err(sqlite3 *db, const char *sql) {
     fprintf(stderr, "SQL: %s\nError: %s\n", sql, sqlite3_errmsg(db));
 }
@@ -61,24 +63,16 @@ static int db_is_tables_exist(sqlite3 *db) {
     sqlite3_finalize(stmt);
     return 1;
 }
-static int db_init_tables(sqlite3 *db, str_t *err) {
+static int db_init_tables(sqlite3 *db) {
     const char *s;
-    char *serr;
     int z;
 
     s = "CREATE TABLE IF NOT EXISTS cat (cat_id INTEGER PRIMARY KEY NOT NULL, name TEXT);"
         "CREATE TABLE IF NOT EXISTS exp (exp_id INTEGER PRIMARY KEY NOT NULL, date TEXT NOT NULL, desc TEXT NOT NULL DEFAULT '', amt REAL NOT NULL DEFAULT 0.0, cat_id INTEGER NOT NULL DEFAULT 1);";
-    z = sqlite3_exec(db, s, 0, 0, &serr);
-    if (z != 0) {
-        if (err != NULL)
-            str_assign(err, serr);
-        sqlite3_free(serr);
+    z = sqlite3_exec(db, s, 0, 0, NULL);
+    if (z != 0)
         sqlite3_close_v2(db);
-        return 1;
-    }
-    if (err != NULL)
-        str_assign(err, "");
-    return 0;
+    return z;
 }
 
 int file_exists(const char *file) {
@@ -88,84 +82,63 @@ int file_exists(const char *file) {
     return 0;
 }
 
-int create_tmp_expense_file(str_t *retdbfile, sqlite3 **pdb, str_t *err) {
+int create_tmp_expense_file(str_t *retdbfile, sqlite3 **pdb) {
     char fmt[] = "/tmp/expXXXXXX";
     int fd;
 
     fd = mkstemp(fmt);
     if (fd == -1) {
-        if (err != NULL)
-            str_assign(err, strerror(errno));
-        return 1;
+        return DB_MKSTEMP_ERR;
     }
     close(fd);
 
     str_assign(retdbfile, fmt);
-    return create_expense_file(fmt, pdb, err);
+    return create_expense_file(fmt, pdb);
 }
 
-int create_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err) {
+int create_expense_file(const char *dbfile, sqlite3 **pdb) {
     struct stat st;
     sqlite3 *db;
     int z;
 
-    if (stat(dbfile, &st) == 0) {
-        if (err != NULL)
-            str_assign(err, "Expense file already exists.");
-        return 1;
-    }
+    if (stat(dbfile, &st) == 0)
+        return DB_FILE_EXISTS;
 
     z = sqlite3_open(dbfile, pdb);
     db = *pdb;
     if (z != 0) {
-        if (err != NULL)
-            str_assign(err, (char*) sqlite3_errmsg(db));
         sqlite3_close_v2(db);
-        return 1;
+        return z;
     }
-    z = db_init_tables(db, err);
+    z = db_init_tables(db);
     if (z != 0) {
         sqlite3_close_v2(db);
-        return 1;
+        return z;
     }
-
-    if (err != NULL)
-        str_assign(err, "");
     return 0;
 }
 
-int open_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err) {
+int open_expense_file(const char *dbfile, sqlite3 **pdb) {
     sqlite3 *db;
     int z;
 
-    if (!file_exists(dbfile)) {
-        if (err != NULL)
-            str_assign(err, "File doesn't exist");
-        return 1;
-    }
+    if (!file_exists(dbfile))
+        return DB_FILE_NOT_FOUND;
 
     z = sqlite3_open(dbfile, pdb);
     db = *pdb;
-    if (z != 0) {
-        if (err != NULL)
-            str_assign(err, (char*) sqlite3_errmsg(db));
-        return 1;
-    }
+    if (z != 0)
+        return z;
+
     if (!db_is_database_file(db)) {
-        if (err != NULL)
-            str_assign(err, "Not an expense file");
         sqlite3_close_v2(db);
-        return 1;
+        return DB_NOT_EXPFILE;
     }
     if (!db_is_tables_exist(db)) {
-        if (err != NULL)
-            str_assign(err, "Not an expense file");
         sqlite3_close_v2(db);
-        return 1;
+        return DB_NOT_EXPFILE;
     }
 
-    if (err != NULL)
-        str_assign(err, "");
     fprintf(stderr, "Opened dbfile '%s'\n", dbfile);
     return 0;
 }
@@ -240,14 +213,14 @@ int db_find_cat_by_id(sqlite3 *db, uint64_t catid, cat_t *cat) {
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     sqlite3_bind_int(stmt, 1, catid);
 
     z = sqlite3_step(stmt);
     if (z < SQLITE_ROW) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     if (z == SQLITE_ROW) {
         cat->catid = sqlite3_column_int64(stmt, 0);
@@ -267,7 +240,7 @@ int db_select_cat(sqlite3 *db, array_t *cats) {
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
 
     array_clear(cats);
@@ -279,7 +252,7 @@ int db_select_cat(sqlite3 *db, array_t *cats) {
     }
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     sqlite3_finalize(stmt);
     return 0;
@@ -293,7 +266,7 @@ int db_add_cat(sqlite3 *db, cat_t *cat) {
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     z = sqlite3_bind_text(stmt, 1, cat->name->s, -1, NULL);
     assert(z == 0);
@@ -301,7 +274,7 @@ int db_add_cat(sqlite3 *db, cat_t *cat) {
     z = sqlite3_step(stmt);
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     sqlite3_finalize(stmt);
     return 0;
@@ -315,7 +288,7 @@ int db_edit_cat(sqlite3 *db, cat_t *cat) {
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     z = sqlite3_bind_text(stmt, 1, cat->name->s, -1, NULL);
     assert(z == 0);
@@ -325,7 +298,7 @@ int db_edit_cat(sqlite3 *db, cat_t *cat) {
     z = sqlite3_step(stmt);
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     sqlite3_finalize(stmt);
     return 0;
@@ -339,7 +312,7 @@ int db_del_cat(sqlite3 *db, uint catid) {
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     z = sqlite3_bind_int(stmt, 1, catid);
     assert(z == 0);
@@ -347,7 +320,7 @@ int db_del_cat(sqlite3 *db, uint catid) {
     z = sqlite3_step(stmt);
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     sqlite3_finalize(stmt);
     return 0;
@@ -372,7 +345,7 @@ int db_select_exp(sqlite3 *db, const char *min_date, const char * max_date, arra
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     z = sqlite3_bind_text(stmt, 1, min_date, -1, NULL);
     assert(z == 0);
@@ -393,7 +366,7 @@ int db_select_exp(sqlite3 *db, const char *min_date, const char * max_date, arra
     }
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     sqlite3_finalize(stmt);
     return 0;
@@ -408,7 +381,7 @@ int db_add_exp(sqlite3 *db, exp_t *xp) {
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     date_to_iso(xp->date, isodate, sizeof(isodate));
     z = sqlite3_bind_text(stmt, 1, isodate, -1, NULL);
@@ -423,7 +396,7 @@ int db_add_exp(sqlite3 *db, exp_t *xp) {
     z = sqlite3_step(stmt);
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     sqlite3_finalize(stmt);
     return 0;
@@ -438,7 +411,7 @@ int db_edit_exp(sqlite3 *db, exp_t *xp) {
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     date_to_iso(xp->date, isodate, sizeof(isodate));
     z = sqlite3_bind_text(stmt, 1, isodate, -1, NULL);
@@ -455,7 +428,7 @@ int db_edit_exp(sqlite3 *db, exp_t *xp) {
     z = sqlite3_step(stmt);
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     sqlite3_finalize(stmt);
     return 0;
@@ -469,7 +442,7 @@ int db_del_exp(sqlite3 *db, uint expid) {
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     z = sqlite3_bind_int(stmt, 1, expid);
     assert(z == 0);
@@ -477,7 +450,7 @@ int db_del_exp(sqlite3 *db, uint expid) {
     z = sqlite3_step(stmt);
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
-        return 1;
+        return z;
     }
     sqlite3_finalize(stmt);
     return 0;

@@ -10,6 +10,22 @@
 #include "db.h"
 #include "expense.h"
 
+const char *exp_strerror(int errnum) {
+    if (errnum == 0)
+        return "OK";
+    if (errnum > 0 && errnum <= SQLITE_DONE)
+        return "sqlite3 error";
+    if (errnum == DB_FILE_EXISTS)
+        return "File exists";
+    if (errnum == DB_FILE_NOT_FOUND)
+        return "File not found";
+    if (errnum == DB_MKSTEMP_ERR)
+        return "Error creating temp file";
+    if (errnum == DB_NOT_EXPFILE)
+        return "Not an expense file";
+    return "Unknown error";
+}
+
 ExpenseContext *ctx_new() {
     ExpenseContext *ctx = (ExpenseContext*) malloc(sizeof(ExpenseContext));
     ctx->expfile = str_new(0);
@@ -50,11 +66,11 @@ void ctx_close(ExpenseContext *ctx) {
     array_clear(ctx->cats);
 }
 
-int ctx_create_expense_file(ExpenseContext *ctx, const char *filename, str_t *err) {
+int ctx_create_expense_file(ExpenseContext *ctx, const char *filename) {
     int z;
     sqlite3 *expfiledb;
 
-    z = create_expense_file(filename, &expfiledb, err);
+    z = create_expense_file(filename, &expfiledb);
     if (z != 0)
         return z;
 
@@ -68,13 +84,13 @@ int ctx_create_expense_file(ExpenseContext *ctx, const char *filename, str_t *er
     return 0;
 }
 
-int ctx_open_expense_file(ExpenseContext *ctx, const char *filename, str_t *err) {
+int ctx_open_expense_file(ExpenseContext *ctx, const char *filename) {
     int z;
     sqlite3 *expfiledb;
 
-    z = open_expense_file(filename, &expfiledb, err);
+    z = open_expense_file(filename, &expfiledb);
     if (z != 0)
-        return 1;
+        return z;
 
     ctx_close(ctx);
     ctx->expfiledb = expfiledb;
@@ -86,7 +102,7 @@ int ctx_open_expense_file(ExpenseContext *ctx, const char *filename, str_t *err)
     return 0;
 }
 
-int ctx_init_from_args(ExpenseContext *ctx, int argc, char **argv, str_t *err) {
+int ctx_init_from_args(ExpenseContext *ctx, int argc, char **argv) {
     const char *expfile = NULL;
 
     if (argc <= 1)
@@ -102,7 +118,7 @@ int ctx_init_from_args(ExpenseContext *ctx, int argc, char **argv, str_t *err) {
                 return 1;
             }
             expfile = argv[i+1];
-            return ctx_create_expense_file(ctx, expfile, err);
+            return ctx_create_expense_file(ctx, expfile);
         }
 
         // <program> <expense file>
@@ -115,7 +131,7 @@ int ctx_init_from_args(ExpenseContext *ctx, int argc, char **argv, str_t *err) {
         printf("File '%s' doesn't exist.\n", expfile);
         return 1;
     }
-    return ctx_open_expense_file(ctx, expfile, err);
+    return ctx_open_expense_file(ctx, expfile);
 }
 
 int ctx_is_open_expfile(ExpenseContext *ctx) {

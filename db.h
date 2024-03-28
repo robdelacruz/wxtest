@@ -8,6 +8,12 @@ extern "C" {
 #include "clib.h"
 #include "sqlite3/sqlite3.h"
 
+#define DB_OK               0
+#define DB_FILE_EXISTS      201
+#define DB_FILE_NOT_FOUND   202
+#define DB_MKSTEMP_ERR      203
+#define DB_NOT_EXPFILE      204
+
 typedef struct {
     uint64_t catid;
     str_t *name;
@@ -33,9 +39,9 @@ void exp_dup(sqlite3 *db, exp_t *dest, exp_t *src);
 int exp_is_valid(exp_t *xp);
 
 int file_exists(const char *file);
-int create_tmp_expense_file(str_t *retdbfile, sqlite3 **pdb, str_t *err);
-int create_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err);
-int open_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err);
+int create_tmp_expense_file(str_t *retdbfile, sqlite3 **pdb);
+int create_expense_file(const char *dbfile, sqlite3 **pdb);
+int open_expense_file(const char *dbfile, sqlite3 **pdb);
 
 int db_select_cat(sqlite3 *db, array_t *cats);
 int db_find_cat_by_id(sqlite3 *db, uint64_t catid, cat_t *cat);
