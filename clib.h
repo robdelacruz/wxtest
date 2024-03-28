@@ -9,6 +9,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 #define countof(v) (sizeof(v) / sizeof((v)[0]))
 #define memzero(p, v) (memset(p, 0, sizeof(v)))
@@ -67,6 +68,7 @@ date_t *date_new_cal(uint year, uint month, uint day);
 date_t *date_new_iso(char *isodate);
 void date_free(date_t *dt);
 void date_assign_time(date_t *dt, time_t time);
+date_t *date_assign_today(date_t *dt);
 int date_assign_cal(date_t *dt, uint year, uint month, uint day);
 int date_assign_iso(date_t *dt, char *isodate);
 void date_to_iso(date_t *dt, char *buf, size_t buf_len);

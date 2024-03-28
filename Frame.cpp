@@ -15,10 +15,12 @@
 #define ID_FRAME_TITLE 104
 
 BEGIN_EVENT_TABLE(MyFrame, wxFrame)
-    EVT_MENU(wxID_EXIT, MyFrame::OnQuit)
-    EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnListItemActivated)
+    EVT_MENU(wxID_NEW, MyFrame::OnFileNew)
+    EVT_MENU(wxID_OPEN, MyFrame::OnFileOpen)
+    EVT_MENU(wxID_EXIT, MyFrame::OnFileExit)
     EVT_BUTTON(ID_PREV_MONTH, MyFrame::OnPrevMonth)
     EVT_BUTTON(ID_NEXT_MONTH, MyFrame::OnNextMonth)
+    EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnListItemActivated)
 END_EVENT_TABLE()
 
 MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title) {
@@ -32,6 +34,8 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title) {
     SetIcon(wxIcon(home_xpm));
 
     fileMenu = new wxMenu;
+    fileMenu->Append(wxID_NEW, wxT("&New\tCtrl-Shift-N"), wxT("New Expense File"));
+    fileMenu->Append(wxID_OPEN, wxT("&Open\tCtrl-O"), wxT("Open Expense File"));
     fileMenu->Append(wxID_EXIT, wxT("E&xit\tCtrl-Q"), wxT("Quit program"));
 
     menubar = new wxMenuBar();
@@ -77,15 +81,14 @@ void MyFrame::RefreshExpenses() {
     wxStaticText *st;
     wxListView *lv;
     exp_t *xp;
-    char buf[12];
-    char buftitle[50];
+    char buf[24];
 
     if (!ctx_is_open_expfile(ctx))
         return;
 
     st = (wxStaticText *) wxWindow::FindWindowById(ID_FRAME_TITLE, this);
-    date_strftime(ctx->dt, "%B %Y", buftitle, sizeof(buftitle));
-    st->SetLabel(wxString::FromUTF8(buftitle));
+    date_strftime(ctx->dt, "%B %Y", buf, sizeof(buf));
+    st->SetLabel(wxString::FromUTF8(buf));
 
     ctx_refresh_expenses(ctx);
 
@@ -103,17 +106,31 @@ void MyFrame::RefreshExpenses() {
     }
 }
 
-void MyFrame::OnQuit(wxCommandEvent& event) {
+void MyFrame::OnFileNew(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
+    wxFileDialog *dlg;
+    int z;
+
+    dlg = new wxFileDialog(this, wxT("New Expense File"), wxEmptyString, wxEmptyString, wxFileSelectorDefaultWildcardStr, wxFD_OPEN, wxDefaultPosition, wxDefaultSize);
+    z = dlg->ShowModal();
+    if (z == wxID_OK) {
+        str_t *err = str_new(0);
+        wxString expfile = dlg->GetPath();
+        if (ctx_create_expense_file(ctx, expfile.ToUTF8(), err) != 0) {
+            wxMessageDialog msgdlg(NULL, wxT("Error occured"), wxString::FromUTF8(err->s), wxOK | wxICON_ERROR);
+            msgdlg.ShowModal();
+        }
+    }
+
+    dlg->Destroy();
+}
+void MyFrame::OnFileOpen(wxCommandEvent& event) {
+//    ExpenseContext *ctx = getContext();
+}
+void MyFrame::OnFileExit(wxCommandEvent& event) {
     Close();
 }
 
-void MyFrame::OnListItemActivated(wxListEvent& event) {
-    long i = event.GetIndex();
-    printf("list activated GetIndex(): %ld\n", i);
-    wxListItem item = event.GetItem();
-    wxString s = event.GetText();
-    printf("on list selected: '%s'\n", s.mb_str().data());
-}
 void MyFrame::OnPrevMonth(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
     ctx_set_prev_month(ctx);
@@ -123,5 +140,12 @@ void MyFrame::OnNextMonth(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
     ctx_set_next_month(ctx);
     RefreshExpenses();
+}
+void MyFrame::OnListItemActivated(wxListEvent& event) {
+    long i = event.GetIndex();
+    printf("list activated GetIndex(): %ld\n", i);
+    wxListItem item = event.GetItem();
+    wxString s = event.GetText();
+    printf("on list selected: '%s'\n", s.mb_str().data());
 }
 

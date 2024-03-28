@@ -10,7 +10,7 @@
 #include "db.h"
 #include "expense.h"
 
-static ExpenseContext *create_empty_ctx() {
+ExpenseContext *ctx_new() {
     ExpenseContext *ctx = (ExpenseContext*) malloc(sizeof(ExpenseContext));
     ctx->expfile = str_new(0);
     ctx->expfiledb = NULL;
@@ -25,51 +25,72 @@ static ExpenseContext *create_empty_ctx() {
 
     return ctx;
 }
+void ctx_free(ExpenseContext *ctx) {
+    str_free(ctx->expfile);
+    if (ctx->expfiledb)
+        sqlite3_close_v2(ctx->expfiledb);
+    date_free(ctx->dt);
+    date_free(ctx->dttmp);
+    array_free(ctx->xps);
+    array_free(ctx->cats);
+    free(ctx);
+}
+void ctx_close(ExpenseContext *ctx) {
+    str_assign(ctx->expfile, "");
+    if (ctx->expfiledb)
+        sqlite3_close_v2(ctx->expfiledb);
+    ctx->expfiledb = NULL;
 
-ExpenseContext *ctx_create_expense_file(const char *filename, str_t *err) {
+    date_assign_today(ctx->dt);
+    date_set_day(ctx->dt, 1);
+    date_dup(ctx->dttmp, ctx->dt);
+    date_set_next_month(ctx->dttmp);
+
+    array_clear(ctx->xps);
+    array_clear(ctx->cats);
+}
+
+int ctx_create_expense_file(ExpenseContext *ctx, const char *filename, str_t *err) {
     int z;
     sqlite3 *expfiledb;
-    ExpenseContext *ctx = NULL;
 
     z = create_expense_file(filename, &expfiledb, err);
-    if (z != 0) {
-        return NULL;
-    }
+    if (z != 0)
+        return z;
 
-    ctx = create_empty_ctx();
-    str_assign(ctx->expfile, filename);
+    ctx_close(ctx);
     ctx->expfiledb = expfiledb;
-
-    if (err != NULL)
-        str_assign(err, "");
-    return ctx;
-}
-
-ExpenseContext *ctx_open_expense_file(const char *filename, str_t *err) {
-    int z;
-    sqlite3 *expfiledb;
-    ExpenseContext *ctx = NULL;
-
-    z = open_expense_file(filename, &expfiledb, err);
-    if (z != 0) {
-        return NULL;
-    }
-
-    ctx = create_empty_ctx();
     str_assign(ctx->expfile, filename);
-    ctx->expfiledb = expfiledb;
+
+    ctx_refresh_categories(ctx);
     ctx_refresh_expenses(ctx);
 
-    if (err != NULL)
-        str_assign(err, "");
-    return ctx;
+    return 0;
 }
 
-ExpenseContext *ctx_init_args(int argc, char **argv) {
+int ctx_open_expense_file(ExpenseContext *ctx, const char *filename, str_t *err) {
+    int z;
+    sqlite3 *expfiledb;
+
+    z = open_expense_file(filename, &expfiledb, err);
+    if (z != 0)
+        return 1;
+
+    ctx_close(ctx);
+    ctx->expfiledb = expfiledb;
+    str_assign(ctx->expfile, filename);
+
+    ctx_refresh_categories(ctx);
+    ctx_refresh_expenses(ctx);
+
+    return 0;
+}
+
+int ctx_init_from_args(ExpenseContext *ctx, int argc, char **argv, str_t *err) {
     const char *expfile = NULL;
 
     if (argc <= 1)
-        return create_empty_ctx();
+        return 0;
 
     for (int i=1; i < argc; i++) {
         char *arg = argv[i];
@@ -78,10 +99,10 @@ ExpenseContext *ctx_init_args(int argc, char **argv) {
         if (strcmp(arg, "create") == 0) {
             if (i == argc-1) {
                 printf("Usage:\n%s create <expense file>\n", argv[0]);
-                return NULL;
+                return 1;
             }
             expfile = argv[i+1];
-            return ctx_create_expense_file(expfile, NULL);
+            return ctx_create_expense_file(ctx, expfile, err);
         }
 
         // <program> <expense file>
@@ -92,19 +113,9 @@ ExpenseContext *ctx_init_args(int argc, char **argv) {
     assert(expfile != NULL);
     if (!file_exists(expfile)) {
         printf("File '%s' doesn't exist.\n", expfile);
-        return NULL;
+        return 1;
     }
-    return ctx_open_expense_file(expfile, NULL);
-}
-
-void ctx_close(ExpenseContext *ctx) {
-    str_free(ctx->expfile);
-    sqlite3_close_v2(ctx->expfiledb);
-    date_free(ctx->dt);
-    date_free(ctx->dttmp);
-    array_free(ctx->xps);
-    array_free(ctx->cats);
-    free(ctx);
+    return ctx_open_expense_file(ctx, expfile, err);
 }
 
 int ctx_is_open_expfile(ExpenseContext *ctx) {

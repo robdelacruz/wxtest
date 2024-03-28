@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <time.h>
-
 #include "clib.h"
 
 void quit(const char *s) {
@@ -73,6 +72,11 @@ void date_free(date_t *dt) {
 void date_assign_time(date_t *dt, time_t time) {
     dt->time = time;
     localtime_r(&dt->time, &dt->tm);
+}
+date_t *date_assign_today(date_t *dt) {
+    dt->time = time(NULL);
+    localtime_r(&dt->time, &dt->tm);
+    return dt;
 }
 int date_assign_cal(date_t *dt, uint year, uint month, uint day) {
     time_t time;

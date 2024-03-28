@@ -7,10 +7,13 @@
 class MyFrame : public wxFrame {
 public:
     MyFrame(const wxString& title);
-    void OnQuit(wxCommandEvent& event);
-    void OnListItemActivated(wxListEvent& event);
+    void OnFileNew(wxCommandEvent& event);
+    void OnFileOpen(wxCommandEvent& event);
+    void OnFileExit(wxCommandEvent& event);
+
     void OnPrevMonth(wxCommandEvent& event);
     void OnNextMonth(wxCommandEvent& event);
+    void OnListItemActivated(wxListEvent& event);
 
     void RefreshExpenses();
 

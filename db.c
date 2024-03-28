@@ -111,7 +111,7 @@ int create_expense_file(const char *dbfile, sqlite3 **pdb, str_t *err) {
 
     if (stat(dbfile, &st) == 0) {
         if (err != NULL)
-            str_assign(err, "file exists");
+            str_assign(err, "Expense file already exists.");
         return 1;
     }
 
