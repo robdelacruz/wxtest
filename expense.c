@@ -58,6 +58,7 @@ ExpenseContext *ctx_open_expense_file(const char *filename, str_t *err) {
     ctx = create_empty_ctx();
     str_assign(ctx->expfile, filename);
     ctx->expfiledb = expfiledb;
+    ctx_refresh_expenses(ctx);
 
     if (err != NULL)
         str_assign(err, "");
@@ -106,6 +107,27 @@ void ctx_close(ExpenseContext *ctx) {
     free(ctx);
 }
 
+int ctx_is_open_expfile(ExpenseContext *ctx) {
+    if (ctx->expfile->len > 0 && ctx->expfiledb != NULL)
+        return 1;
+    return 0;
+}
+void ctx_set_prev_month(ExpenseContext *ctx) {
+    date_set_prev_month(ctx->dt);
+}
+void ctx_set_next_month(ExpenseContext *ctx) {
+    date_set_next_month(ctx->dt);
+}
+void ctx_set_year(ExpenseContext *ctx, int year) {
+    if (year >= 1900)
+        date_set_year(ctx->dt, year);
+}
+void ctx_set_month(ExpenseContext *ctx, int month) {
+    if (month >= 1 && month <= 12)
+        date_set_month(ctx->dt, month);
+    date_set_day(ctx->dt, 1);
+}
+
 int ctx_refresh_categories(ExpenseContext *ctx) {
     return db_select_cat(ctx->expfiledb, ctx->cats);
 }
@@ -119,15 +141,12 @@ int ctx_refresh_categories(ExpenseContext *ctx) {
 //   ctx_refresh_expenses(ctx, 2023, 3)  // set year/month to 2023 March
 //   ctx_refresh_expenses(ctx, 1899, 0)  // outside the valid ranges, year/month unchanged
 //
-int ctx_refresh_expenses(ExpenseContext *ctx, int year, int month) {
+int ctx_refresh_expenses(ExpenseContext *ctx) {
     char min_date[ISO_DATE_LEN+1];
     char max_date[ISO_DATE_LEN+1];
 
-    if (year >= 1900)
-        date_set_year(ctx->dt, year);
-    if (month >= 1 && month <= 12)
-        date_set_month(ctx->dt, month);
-    date_set_day(ctx->dt, 1);
+    if (!ctx_is_open_expfile(ctx))
+        return 1;
 
     // Generate date range for min_date <= data < max_date
     // Given year=2024, month=3
@@ -140,11 +159,5 @@ int ctx_refresh_expenses(ExpenseContext *ctx, int year, int month) {
     date_to_iso(ctx->dttmp, max_date, sizeof(max_date));
 
     return db_select_exp(ctx->expfiledb, min_date, max_date, ctx->xps);
-}
-
-int ctx_is_open_expfile(ExpenseContext *ctx) {
-    if (ctx->expfile->len > 0 && ctx->expfiledb != NULL)
-        return 1;
-    return 0;
 }
 

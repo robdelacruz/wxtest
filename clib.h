@@ -70,7 +70,7 @@ void date_assign_time(date_t *dt, time_t time);
 int date_assign_cal(date_t *dt, uint year, uint month, uint day);
 int date_assign_iso(date_t *dt, char *isodate);
 void date_to_iso(date_t *dt, char *buf, size_t buf_len);
-void date_strftime(date_t *dt, char *fmt, char *buf, size_t buf_len);
+void date_strftime(date_t *dt, const char *fmt, char *buf, size_t buf_len);
 void date_dup(date_t *dest, date_t *src);
 time_t date_time(date_t *dt);
 int date_year(date_t *dt);

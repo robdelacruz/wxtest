@@ -114,7 +114,7 @@ int date_assign_iso(date_t *dt, char *isodate) {
 void date_to_iso(date_t *dt, char *buf, size_t buf_len) {
     strftime(buf, buf_len, "%F", &dt->tm);
 }
-void date_strftime(date_t *dt, char *fmt, char *buf, size_t buf_len) {
+void date_strftime(date_t *dt, const char *fmt, char *buf, size_t buf_len) {
     strftime(buf, buf_len, fmt, &dt->tm);
 }
 void date_dup(date_t *dest, date_t *src) {
