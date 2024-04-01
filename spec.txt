@@ -6,6 +6,11 @@ p = new wxControl(this, wxID_ANY, data, wxDefaultPosition, wxDefaultSize, wxDefa
 vbox = new wxBoxSizer(wxVERTICAL|wxHORIZONTAL)
 vbox->Add(w, proportion, flags, border);
 
+sizer->Detach(w);
+sizer->Insert(i, w, ...);
+sizer->Show(w);
+sizer->Layout();
+
 sizer flags:
 wxTOP|BOTTOM|LEFT|RIGHT|ALL
 wxEXPAND|wxSHAPED
