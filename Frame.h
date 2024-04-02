@@ -16,7 +16,9 @@ public:
     void OnNextMonth(wxCommandEvent& event);
     void OnListItemActivated(wxListEvent& event);
 
-    void RefreshFrame();
+    void CreateMenuBar();
+    void CreateControls();
+    void RefreshControls();
     void RefreshExpenses();
 
 private:
