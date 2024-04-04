@@ -21,6 +21,9 @@ public:
     void RefreshControls();
     void RefreshExpenses();
 
+    wxPanel *CreateExpensesNav(wxWindow *parent);
+    wxPanel *CreateExpensesView(wxWindow *parent);
+
 private:
     DECLARE_EVENT_TABLE()
 

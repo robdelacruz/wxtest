@@ -2,6 +2,8 @@
 
 #include "wx/wx.h"
 #include "wx/window.h"
+#include "wx/listctrl.h"
+#include "wx/splitter.h"
 #include "wx/filename.h"
 #include "App.h"
 #include "Frame.h"
@@ -10,21 +12,29 @@
 #include "art/back.xpm"
 #include "art/forward.xpm"
 
-#define ID_PREV_MONTH 101
-#define ID_NEXT_MONTH 102
-#define ID_EXPENSES_LIST 103
-#define ID_EXPENSES_HEADING 104
-#define ID_EXPENSE_NEW 105
-#define ID_EXPENSE_EDIT 106
-#define ID_EXPENSE_DEL 107
+enum {
+    ID_EXPENSE_NEW = 101,
+    ID_EXPENSE_EDIT,
+    ID_EXPENSE_DEL,
+
+    ID_EXPENSES_PREV,
+    ID_EXPENSES_NEXT,
+    ID_EXPENSES_FILTERTEXT,
+
+    ID_EXPENSES_LIST,
+    ID_EXPENSES_HEADING,
+    ID_EXPENSES_PANEL,
+
+    ID_COUNT
+};
 
 BEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(wxID_NEW, MyFrame::OnFileNew)
     EVT_MENU(wxID_OPEN, MyFrame::OnFileOpen)
     EVT_MENU(wxID_CLOSE, MyFrame::OnFileClose)
     EVT_MENU(wxID_EXIT, MyFrame::OnFileExit)
-    EVT_BUTTON(ID_PREV_MONTH, MyFrame::OnPrevMonth)
-    EVT_BUTTON(ID_NEXT_MONTH, MyFrame::OnNextMonth)
+    EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevMonth)
+    EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNextMonth)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnListItemActivated)
 END_EVENT_TABLE()
 
@@ -72,41 +82,72 @@ void MyFrame::CreateMenuBar() {
 }
 
 void MyFrame::CreateControls() {
-    wxListView *lv;
-    wxBitmapButton *btnPrev, *btnNext;
-    wxBoxSizer *vbox;
-    wxBoxSizer *hbox;
+    wxSplitterWindow *hsplitter;
+    wxPanel *pnlExpensesView;
 
     DestroyChildren();
     SetSizer(NULL);
 
-    //lv = new wxListView(this, wxID_ANY, wxDefaultPosition, wxSize(250,200));
-    lv = new wxListView(this, ID_EXPENSES_LIST);
+    hsplitter = new wxSplitterWindow(this, wxID_ANY, wxPoint(0,0), wxSize(400,400), wxSP_3D);
+    pnlExpensesView = CreateExpensesView(hsplitter);
+
+    hsplitter->Initialize(pnlExpensesView);
+
+//    vbox->Fit(this);
+//    vbox->SetSizeHints(this);
+}
+
+wxPanel* MyFrame::CreateExpensesNav(wxWindow *parent) {
+    return NULL;
+}
+
+wxPanel* MyFrame::CreateExpensesView(wxWindow *parent) {
+    wxPanel *pnl;
+    wxListView *lv;
+    wxBitmapButton *btnPrev, *btnNext;
+    wxTextCtrl *txtFilter;
+    wxBoxSizer *vbox;
+    wxBoxSizer *hbox;
+    wxListItem colAmount;
+
+    pnl = new wxPanel(parent, ID_EXPENSES_PANEL);
+
+    //lv = new wxListView(pnl, wxID_ANY, wxDefaultPosition, wxSize(250,200));
+    lv = new wxListView(pnl, ID_EXPENSES_LIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT);
     lv->AppendColumn("Date");
     lv->AppendColumn("Description");
     lv->AppendColumn("Amount");
     lv->AppendColumn("Category");
 
-    for (int col=0; col <= 3; col++)
-        lv->SetColumnWidth(col, wxLIST_AUTOSIZE_USEHEADER);
-
+    lv->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
     lv->SetColumnWidth(1, 200);
+    lv->SetColumnWidth(2, wxLIST_AUTOSIZE_USEHEADER);
+    lv->SetColumnWidth(3, wxLIST_AUTOSIZE_USEHEADER);
 
-    btnPrev = new wxBitmapButton(this, ID_PREV_MONTH, wxBitmap(back_xpm));
-    btnNext = new wxBitmapButton(this, ID_NEXT_MONTH, wxBitmap(forward_xpm));
+    lv->GetColumn(2, colAmount);
+    colAmount.SetAlign(wxLIST_FORMAT_RIGHT);
+    lv->SetColumn(2, colAmount);
+
+    btnPrev = new wxBitmapButton(pnl, ID_EXPENSES_PREV, wxBitmap(back_xpm));
+    btnNext = new wxBitmapButton(pnl, ID_EXPENSES_NEXT, wxBitmap(forward_xpm));
     hbox = new wxBoxSizer(wxHORIZONTAL);
-    hbox->Add(btnPrev, 0, wxEXPAND, 0);
+    hbox->Add(btnPrev, 0, wxALIGN_CENTER, 0);
+    hbox->AddSpacer(5);
+    hbox->Add(new wxStaticText(pnl, ID_EXPENSES_HEADING, ""), 0, wxALIGN_CENTER, 0);
+    hbox->AddSpacer(5);
+    hbox->Add(btnNext, 0, wxALIGN_CENTER, 0);
     hbox->AddStretchSpacer();
-    hbox->Add(new wxStaticText(this, ID_EXPENSES_HEADING, ""), 0, wxALIGN_CENTER_VERTICAL, 0);
-    hbox->AddStretchSpacer();
-    hbox->Add(btnNext, 0, wxEXPAND, 0);
+    hbox->Add(new wxStaticText(pnl, wxID_ANY, "Filter:"), 0, wxALIGN_CENTER, 0);
+    hbox->AddSpacer(5);
+    txtFilter = new wxTextCtrl(pnl, ID_EXPENSES_FILTERTEXT, wxT(""), wxDefaultPosition, wxSize(300,-1));
+    hbox->Add(txtFilter, 0, wxALIGN_CENTER, 0);
 
     vbox = new wxBoxSizer(wxVERTICAL);
     vbox->Add(hbox, 0, wxEXPAND|wxTOP|wxBOTTOM, 5);
     vbox->Add(lv, 1, wxEXPAND, 0);
-    SetSizer(vbox);
-//    vbox->Fit(this);
-//    vbox->SetSizeHints(this);
+    pnl->SetSizer(vbox);
+
+    return pnl;
 }
 
 void MyFrame::RefreshControls() {
@@ -119,8 +160,8 @@ void MyFrame::RefreshControls() {
 
     st = (wxStaticText *) wxWindow::FindWindowById(ID_EXPENSES_HEADING);
     lv = wxWindow::FindWindowById(ID_EXPENSES_LIST);
-    btnPrev = wxWindow::FindWindowById(ID_PREV_MONTH);
-    btnNext = wxWindow::FindWindowById(ID_NEXT_MONTH);
+    btnPrev = wxWindow::FindWindowById(ID_EXPENSES_PREV);
+    btnNext = wxWindow::FindWindowById(ID_EXPENSES_NEXT);
 
     // No open expense file
     if (!ctx_is_open_expfile(ctx)) {
@@ -145,6 +186,7 @@ void MyFrame::RefreshExpenses() {
     ExpenseContext *ctx = getContext();
     wxStaticText *st;
     wxListView *lv;
+    wxPanel *expenses_panel;
     exp_t *xp;
     char buf[24];
 
@@ -152,7 +194,7 @@ void MyFrame::RefreshExpenses() {
         return;
 
     st = (wxStaticText *) wxWindow::FindWindowById(ID_EXPENSES_HEADING, this);
-    date_strftime(ctx->dt, "%B %Y", buf, sizeof(buf));
+    date_strftime(ctx->dt, "%b %Y", buf, sizeof(buf));
     st->SetLabel(wxString::FromUTF8(buf));
 
     ctx_refresh_expenses(ctx);
@@ -169,6 +211,9 @@ void MyFrame::RefreshExpenses() {
         lv->SetItem(i, 2, buf);
         lv->SetItem(i, 3, xp->catname->s);
     }
+
+    expenses_panel = (wxPanel *) wxWindow::FindWindowById(ID_EXPENSES_PANEL);
+    expenses_panel->Layout();
 }
 
 static wxString fileErrorString(wxString& file, int errnum) {
