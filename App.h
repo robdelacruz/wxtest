@@ -11,7 +11,7 @@ public:
     virtual bool OnInit();
 };
 
-DECLARE_APP(MyApp);
+wxDECLARE_APP(MyApp);
 
 ExpenseContext *getContext();
 

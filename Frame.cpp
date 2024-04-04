@@ -7,13 +7,14 @@
 #include "wx/filename.h"
 #include "App.h"
 #include "Frame.h"
+#include "EditExpenseDialog.h"
 #include "db.h"
 #include "art/home.xpm"
 #include "art/back.xpm"
 #include "art/forward.xpm"
 
 enum {
-    ID_EXPENSE_NEW = 101,
+    ID_EXPENSE_NEW = wxID_HIGHEST,
     ID_EXPENSE_EDIT,
     ID_EXPENSE_DEL,
 
@@ -28,7 +29,7 @@ enum {
     ID_COUNT
 };
 
-BEGIN_EVENT_TABLE(MyFrame, wxFrame)
+wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(wxID_NEW, MyFrame::OnFileNew)
     EVT_MENU(wxID_OPEN, MyFrame::OnFileOpen)
     EVT_MENU(wxID_CLOSE, MyFrame::OnFileClose)
@@ -36,7 +37,7 @@ BEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevMonth)
     EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNextMonth)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnListItemActivated)
-END_EVENT_TABLE()
+wxEND_EVENT_TABLE()
 
 MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(640,480)) {
     SetIcon(wxIcon(home_xpm));
@@ -292,5 +293,8 @@ void MyFrame::OnListItemActivated(wxListEvent& event) {
     wxListItem item = event.GetItem();
     wxString s = event.GetText();
     printf("on list selected: '%s'\n", s.mb_str().data());
+
+    EditExpenseDialog dlg(this);
+    dlg.ShowModal();
 }
 

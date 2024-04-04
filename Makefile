@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 CSOURCES=db.c clib.c expense.c
-CPPSOURCES=App.cpp Frame.cpp
+CPPSOURCES=App.cpp Frame.cpp EditExpenseDialog.cpp
 COBJECTS=$(patsubst %.c, %.o, $(CSOURCES))
 CPPOBJECTS=$(patsubst %.cpp, %.o, $(CPPSOURCES))
 OBJECTS=$(COBJECTS) $(CPPOBJECTS) sqlite3.o

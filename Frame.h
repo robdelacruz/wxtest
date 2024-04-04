@@ -25,10 +25,7 @@ public:
     wxPanel *CreateExpensesView(wxWindow *parent);
 
 private:
-    DECLARE_EVENT_TABLE()
-
-//    wxMenu *m_fileMenu;
-//    wxMenu *m_expenseMenu;
+    wxDECLARE_EVENT_TABLE();
 };
 
 #endif
