@@ -30,6 +30,8 @@ enum {
     ID_EXPENSES_HEADING,
     ID_EXPENSES_PANEL,
 
+    ID_EXPENSE_GRID,
+
     ID_COUNT
 };
 
@@ -41,6 +43,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevMonth)
     EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNextMonth)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnListItemActivated)
+    EVT_PG_CHANGED(ID_EXPENSE_GRID, MyFrame::OnPropertyGridChanged)
 wxEND_EVENT_TABLE()
 
 MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(640,480)) {
@@ -174,9 +177,9 @@ wxPropertyGrid* MyFrame::CreateExpensePropGrid(wxWindow *parent) {
     cats.Add("Cat food");
     cats.Add("Utilities");
 
-    pg = new wxPropertyGrid(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxPG_SPLITTER_AUTO_CENTER | wxPG_DEFAULT_STYLE);
+    pg = new wxPropertyGrid(parent, ID_EXPENSE_GRID, wxDefaultPosition, wxDefaultSize, wxPG_SPLITTER_AUTO_CENTER | wxPG_DEFAULT_STYLE);
     pg->Append(new wxPropertyCategory("Expense"));
-    pg->Append(new wxStringProperty("Description", "starbucks", "<expense item>"));
+    pg->Append(new wxStringProperty("Description", wxPG_LABEL, "starbucks"));
     pg->Append(new wxFloatProperty("Amount", wxPG_LABEL, 85.00));
     pg->Append(new wxEnumProperty("Category", wxPG_LABEL, cats));
     pg->Append(new wxDateProperty("Date", wxPG_LABEL, wxDateTime::Now()));
@@ -329,5 +332,17 @@ void MyFrame::OnListItemActivated(wxListEvent& event) {
 
     EditExpenseDialog dlg(this);
     dlg.ShowModal();
+}
+
+void MyFrame::OnPropertyGridChanged(wxPropertyGridEvent& event) {
+    wxPropertyGrid *pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
+    wxPGProperty *prop = event.GetProperty();
+    const wxString& name = prop->GetName();
+    const wxString& label = prop->GetLabel();
+
+    wxLogDebug("OnPropertyGridChanged() name: '%s' label: '%s'\n", name, label);
+
+    pg->SetPropertyValue(prop, "changed!");
+
 }
 

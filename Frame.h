@@ -16,6 +16,7 @@ public:
     void OnPrevMonth(wxCommandEvent& event);
     void OnNextMonth(wxCommandEvent& event);
     void OnListItemActivated(wxListEvent& event);
+    void OnPropertyGridChanged(wxPropertyGridEvent& event);
 
     void CreateMenuBar();
     void CreateControls();
