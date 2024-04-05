@@ -5,13 +5,17 @@
 #include "wx/listctrl.h"
 #include "wx/splitter.h"
 #include "wx/filename.h"
+#include "wx/propgrid/propgrid.h"
+#include "wx/propgrid/advprops.h"
+
+#include "art/home.xpm"
+#include "art/back.xpm"
+#include "art/forward.xpm"
+
 #include "App.h"
 #include "Frame.h"
 #include "EditExpenseDialog.h"
 #include "db.h"
-#include "art/home.xpm"
-#include "art/back.xpm"
-#include "art/forward.xpm"
 
 enum {
     ID_EXPENSE_NEW = wxID_HIGHEST,
@@ -83,16 +87,22 @@ void MyFrame::CreateMenuBar() {
 }
 
 void MyFrame::CreateControls() {
-    wxSplitterWindow *hsplitter;
+    wxSplitterWindow *splMain;
+    wxSplitterWindow *splExp;
     wxPanel *pnlExpensesView;
+    wxPropertyGrid *pgExpense;
 
     DestroyChildren();
     SetSizer(NULL);
 
-    hsplitter = new wxSplitterWindow(this, wxID_ANY, wxPoint(0,0), wxSize(400,400), wxSP_3D);
-    pnlExpensesView = CreateExpensesView(hsplitter);
+    splMain = new wxSplitterWindow(this, wxID_ANY, wxPoint(0,0), wxDefaultSize, wxSP_3D);
 
-    hsplitter->Initialize(pnlExpensesView);
+    splExp = new wxSplitterWindow(splMain, wxID_ANY, wxPoint(0,0), wxSize(400,400), wxSP_3D);
+    pnlExpensesView = CreateExpensesView(splExp);
+    pgExpense = CreateExpensePropGrid(splExp);
+    splExp->SplitHorizontally(pnlExpensesView, pgExpense);
+
+    splMain->Initialize(splExp);
 
 //    vbox->Fit(this);
 //    vbox->SetSizeHints(this);
@@ -149,6 +159,29 @@ wxPanel* MyFrame::CreateExpensesView(wxWindow *parent) {
     pnl->SetSizer(vbox);
 
     return pnl;
+}
+
+wxPropertyGrid* MyFrame::CreateExpensePropGrid(wxWindow *parent) {
+    wxPropertyGrid *pg;
+    wxArrayString cats;
+
+    cats.Add("Commute");
+    cats.Add("Coffee");
+    cats.Add("Dine out");
+    cats.Add("Grocery");
+    cats.Add("Food");
+    cats.Add("Household");
+    cats.Add("Cat food");
+    cats.Add("Utilities");
+
+    pg = new wxPropertyGrid(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxPG_SPLITTER_AUTO_CENTER | wxPG_DEFAULT_STYLE);
+    pg->Append(new wxPropertyCategory("Expense"));
+    pg->Append(new wxStringProperty("Description", "starbucks", "<expense item>"));
+    pg->Append(new wxFloatProperty("Amount", wxPG_LABEL, 85.00));
+    pg->Append(new wxEnumProperty("Category", wxPG_LABEL, cats));
+    pg->Append(new wxDateProperty("Date", wxPG_LABEL, wxDateTime::Now()));
+
+    return pg;
 }
 
 void MyFrame::RefreshControls() {

@@ -3,6 +3,7 @@
 
 #include "wx/wx.h"
 #include "wx/listctrl.h"
+#include "wx/propgrid/propgrid.h"
 
 class MyFrame : public wxFrame {
 public:
@@ -23,6 +24,7 @@ public:
 
     wxPanel *CreateExpensesNav(wxWindow *parent);
     wxPanel *CreateExpensesView(wxWindow *parent);
+    wxPropertyGrid *CreateExpensePropGrid(wxWindow *parent);
 
 private:
     wxDECLARE_EVENT_TABLE();
