@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "wx/wx.h"
+#include "wx/datectrl.h"
 #include "EditExpenseDialog.h"
 #include "App.h"
 
@@ -11,17 +12,20 @@ EditExpenseDialog::EditExpenseDialog(wxWindow *parent)
                  : wxDialog(parent, wxID_ANY, wxString("EditExpenseDialog")) {
     wxFlexGridSizer *gs;
     wxStaticText *stDesc, *stAmt, *stCat, *stDate;
-    wxTextCtrl *tcDesc, *tcAmt, *tcCat, *tcDate;
+    wxTextCtrl *tcDesc, *tcAmt, *tcCat;
+    wxDatePickerCtrl *dpDate;
 
-    gs = new wxFlexGridSizer(4, 2, 0, 0);
+    gs = new wxFlexGridSizer(4, 2, 10, 10);
     stDesc = new wxStaticText(this, wxID_ANY, "Description");
     stAmt = new wxStaticText(this, wxID_ANY, "Amount");
     stCat = new wxStaticText(this, wxID_ANY, "Category");
     stDate = new wxStaticText(this, wxID_ANY, "Date");
-    tcDesc = new wxTextCtrl(this, wxID_ANY, "");
+    tcDesc = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(200,-1));
     tcAmt = new wxTextCtrl(this, wxID_ANY, "");
     tcCat = new wxTextCtrl(this, wxID_ANY, "");
-    tcDate = new wxTextCtrl(this, wxID_ANY, "");
+    dpDate = new wxDatePickerCtrl(this, wxID_ANY);
+
+    tcDesc->SetMaxLength(30);
 
     gs->Add(stDesc, 0, wxALIGN_CENTER_VERTICAL, 0);
     gs->Add(tcDesc, 1, wxALIGN_CENTER_VERTICAL, 0);
@@ -30,7 +34,7 @@ EditExpenseDialog::EditExpenseDialog(wxWindow *parent)
     gs->Add(stCat, 0, wxALIGN_CENTER_VERTICAL, 0);
     gs->Add(tcCat, 1, wxALIGN_CENTER_VERTICAL, 0);
     gs->Add(stDate, 0, wxALIGN_CENTER_VERTICAL, 0);
-    gs->Add(tcDate, 1, wxALIGN_CENTER_VERTICAL, 0);
+    gs->Add(dpDate, 1, wxALIGN_CENTER_VERTICAL, 0);
 
     SetSizer(gs);
     gs->Fit(this);
