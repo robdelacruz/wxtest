@@ -38,3 +38,6 @@ https://wiki.wxwidgets.org/Converting_everything_to_and_from_wxString
 // makefile howto
 https://wiki.wlug.org.nz/MakefileHowto
 
+// wxpropertygrid
+https://docs.wxwidgets.org/latest/overview_propgrid.html
+
