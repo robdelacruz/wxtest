@@ -18,9 +18,6 @@ WX_LIBS=-L/usr/local/lib -pthread   /usr/local/lib/libwx_gtk3u_propgrid-3.3.a /u
 CPPFLAGS=-Wall -Werror -g -Wno-deprecated-declarations #-fpermissive -Werror=write-strings
 CPPFLAGS+= $(WX_CXXFLAGS)
 LDFLAGS=$(WX_LIBS)
-LDFLAGS+= /usr/local/lib/libwx_gtk3u_propgrid-3.3.a
-LDFLAGS+= /usr/local/lib/libwx_gtk3u_adv-3.3.a
-LDFLAGS+= /usr/local/lib/libwx_gtk3u_aui-3.3.a
 
 #.SILENT:
 all: t
