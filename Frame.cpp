@@ -57,7 +57,7 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefau
     SetStatusText(wxT("Welcome to wxWidgets."));
     CreateControls();
 
-    RefreshControls();
+    ShowControls();
     RefreshExpenses();
 }
 
@@ -93,33 +93,47 @@ void MyFrame::CreateMenuBar() {
 }
 
 void MyFrame::CreateControls() {
-    wxSplitterWindow *splMain;
-    wxSplitterWindow *splExp;
-    wxPanel *pnlExpensesView;
-    wxPropertyGrid *pgExpense;
+//    wxSplitterWindow *split;
+//    wxPanel *pnlNav, *pnlView;
+    wxWindow *view;
+    wxBoxSizer *vbox;
 
     DestroyChildren();
     SetSizer(NULL);
 
-    splMain = new wxSplitterWindow(this, ID_MAIN_SPLIT, wxPoint(0,0), wxDefaultSize, wxSP_3D);
+//    split = new wxSplitterWindow(this, ID_MAIN_SPLIT, wxPoint(0,0), wxDefaultSize, wxSP_3D);
+//    pnlNav = CreateExpensesNav(split);
+    view = CreateExpensesView(this);
+//    split->SplitVertically(pnlNav, pnlView);
 
-    splExp = new wxSplitterWindow(splMain, ID_EXP_SPLIT, wxPoint(0,0), wxSize(400,400), wxSP_3D);
-    pnlExpensesView = CreateExpensesView(splExp);
-    pgExpense = CreateExpensePropGrid(splExp);
-    splExp->SplitHorizontally(pnlExpensesView, pgExpense);
-    splExp->SetSashPosition(200);
+    vbox = new wxBoxSizer(wxVERTICAL);
+    vbox->Add(view, 1, wxEXPAND, 0);
+    this->SetSizer(vbox);
+//    this->Fit();
 
-    splMain->Initialize(splExp);
-
-//    vbox->Fit(this);
-//    vbox->SetSizeHints(this);
 }
 
-wxPanel* MyFrame::CreateExpensesNav(wxWindow *parent) {
-    return NULL;
+wxWindow* MyFrame::CreateExpensesNav(wxWindow *parent) {
+    wxPanel *pnl;
+    pnl = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(150,-1));
+    return pnl;
 }
 
-wxPanel* MyFrame::CreateExpensesView(wxWindow *parent) {
+wxWindow* MyFrame::CreateExpensesView(wxWindow *parent) {
+    wxSplitterWindow *split;
+    wxWindow *explist;
+    wxWindow *pg;
+
+    //split = new wxSplitterWindow(parent, ID_EXP_SPLIT, wxDefaultPosition, wxSize(500,300), wxSP_3D);
+    split = new wxSplitterWindow(parent, ID_EXP_SPLIT, wxDefaultPosition, wxSize(500,300), wxSP_3D);
+    explist = CreateExpensesList(split);
+    pg = CreateExpensePropGrid(split);
+    split->SplitHorizontally(explist, pg);
+
+    return split;
+}
+
+wxWindow* MyFrame::CreateExpensesList(wxWindow *parent) {
     wxPanel *pnl;
     wxListView *lv;
     wxBitmapButton *btnPrev, *btnNext;
@@ -129,9 +143,11 @@ wxPanel* MyFrame::CreateExpensesView(wxWindow *parent) {
     wxListItem colAmount;
 
     pnl = new wxPanel(parent, ID_EXPENSES_PANEL);
+//    pnl = new wxPanel(parent, ID_EXPENSES_PANEL, wxDefaultPosition, wxSize(500,500));
 
-    //lv = new wxListView(pnl, wxID_ANY, wxDefaultPosition, wxSize(250,200));
-    lv = new wxListView(pnl, ID_EXPENSES_LIST, wxDefaultPosition, wxSize(400,200), wxLC_REPORT);
+    //lv = new wxListView(pnl, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    //lv = new wxListView(pnl, ID_EXPENSES_LIST, wxDefaultPosition, wxSize(400,200), wxLC_REPORT);
+    lv = new wxListView(pnl, ID_EXPENSES_LIST, wxDefaultPosition, wxSize(400,200));
     lv->AppendColumn("Date");
     lv->AppendColumn("Description");
     lv->AppendColumn("Amount");
@@ -168,7 +184,7 @@ wxPanel* MyFrame::CreateExpensesView(wxWindow *parent) {
     return pnl;
 }
 
-wxPropertyGrid* MyFrame::CreateExpensePropGrid(wxWindow *parent) {
+wxWindow* MyFrame::CreateExpensePropGrid(wxWindow *parent) {
     wxPropertyGrid *pg;
     wxArrayString cats;
     wxArrayInt idcats;
@@ -191,19 +207,17 @@ wxPropertyGrid* MyFrame::CreateExpensePropGrid(wxWindow *parent) {
     return pg;
 }
 
-void MyFrame::RefreshControls() {
+void MyFrame::ShowControls() {
     ExpenseContext *ctx = getContext();
-    wxSplitterWindow *mainsplit;
-//    wxSplitterWindow *expsplit;
+//    wxSplitterWindow *split;
     wxString title, filename, ext;
 
-    mainsplit = (wxSplitterWindow *) wxWindow::FindWindowById(ID_MAIN_SPLIT);
-//    expsplit = (wxSplitterWindow *) wxWindow::FindWindowById(ID_EXP_SPLIT);
+//    split = (wxSplitterWindow *) wxWindow::FindWindowById(ID_MAIN_SPLIT);
 
     // No open expense file
     if (!ctx_is_open_expfile(ctx)) {
         SetTitle(wxT("Expense Buddy"));
-        mainsplit->Show(false);
+//        split->Show(false);
         return;
     }
 
@@ -211,7 +225,7 @@ void MyFrame::RefreshControls() {
     wxFileName::SplitPath(wxString::FromUTF8(ctx->expfile->s), NULL, NULL, &filename, &ext);
     title.Printf("Expense Buddy - [%s.%s]", filename, ext);
     SetTitle(title);
-    mainsplit->Show(true);
+//    split->Show(true);
 }
 
 void MyFrame::RefreshExpenses() {
@@ -277,7 +291,7 @@ void MyFrame::OnFileNew(wxCommandEvent& event) {
     }
 
     CreateMenuBar();
-    RefreshControls();
+    ShowControls();
     RefreshExpenses();
 }
 void MyFrame::OnFileOpen(wxCommandEvent& event) {
@@ -297,7 +311,7 @@ void MyFrame::OnFileOpen(wxCommandEvent& event) {
     }
 
     CreateMenuBar();
-    RefreshControls();
+    ShowControls();
     RefreshExpenses();
 }
 void MyFrame::OnFileClose(wxCommandEvent& event) {
@@ -305,7 +319,7 @@ void MyFrame::OnFileClose(wxCommandEvent& event) {
     ctx_close(ctx);
 
     CreateMenuBar();
-    RefreshControls();
+    ShowControls();
     RefreshExpenses();
 }
 void MyFrame::OnFileExit(wxCommandEvent& event) {

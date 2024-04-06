@@ -21,12 +21,13 @@ public:
 
     void CreateMenuBar();
     void CreateControls();
-    void RefreshControls();
+    void ShowControls();
     void RefreshExpenses();
 
-    wxPanel *CreateExpensesNav(wxWindow *parent);
-    wxPanel *CreateExpensesView(wxWindow *parent);
-    wxPropertyGrid *CreateExpensePropGrid(wxWindow *parent);
+    wxWindow *CreateExpensesNav(wxWindow *parent);
+    wxWindow *CreateExpensesView(wxWindow *parent);
+    wxWindow *CreateExpensesList(wxWindow *parent);
+    wxWindow *CreateExpensePropGrid(wxWindow *parent);
 
 private:
     wxDECLARE_EVENT_TABLE();
