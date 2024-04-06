@@ -22,15 +22,17 @@ enum {
     ID_EXPENSE_EDIT,
     ID_EXPENSE_DEL,
 
+    ID_MAIN_SPLIT,
+    ID_EXP_SPLIT,
+
+    ID_EXPENSES_PANEL,
+    ID_EXPENSES_HEADING,
+    ID_EXPENSES_LIST,
+    ID_EXPENSE_GRID,
+
     ID_EXPENSES_PREV,
     ID_EXPENSES_NEXT,
     ID_EXPENSES_FILTERTEXT,
-
-    ID_EXPENSES_LIST,
-    ID_EXPENSES_HEADING,
-    ID_EXPENSES_PANEL,
-
-    ID_EXPENSE_GRID,
 
     ID_COUNT
 };
@@ -42,6 +44,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(wxID_EXIT, MyFrame::OnFileExit)
     EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevMonth)
     EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNextMonth)
+    EVT_LIST_ITEM_SELECTED(ID_EXPENSES_LIST, MyFrame::OnListItemSelected)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnListItemActivated)
     EVT_PG_CHANGED(ID_EXPENSE_GRID, MyFrame::OnPropertyGridChanged)
 wxEND_EVENT_TABLE()
@@ -98,12 +101,13 @@ void MyFrame::CreateControls() {
     DestroyChildren();
     SetSizer(NULL);
 
-    splMain = new wxSplitterWindow(this, wxID_ANY, wxPoint(0,0), wxDefaultSize, wxSP_3D);
+    splMain = new wxSplitterWindow(this, ID_MAIN_SPLIT, wxPoint(0,0), wxDefaultSize, wxSP_3D);
 
-    splExp = new wxSplitterWindow(splMain, wxID_ANY, wxPoint(0,0), wxSize(400,400), wxSP_3D);
+    splExp = new wxSplitterWindow(splMain, ID_EXP_SPLIT, wxPoint(0,0), wxSize(400,400), wxSP_3D);
     pnlExpensesView = CreateExpensesView(splExp);
     pgExpense = CreateExpensePropGrid(splExp);
     splExp->SplitHorizontally(pnlExpensesView, pgExpense);
+    splExp->SetSashPosition(200);
 
     splMain->Initialize(splExp);
 
@@ -127,7 +131,7 @@ wxPanel* MyFrame::CreateExpensesView(wxWindow *parent) {
     pnl = new wxPanel(parent, ID_EXPENSES_PANEL);
 
     //lv = new wxListView(pnl, wxID_ANY, wxDefaultPosition, wxSize(250,200));
-    lv = new wxListView(pnl, ID_EXPENSES_LIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT);
+    lv = new wxListView(pnl, ID_EXPENSES_LIST, wxDefaultPosition, wxSize(400,200), wxLC_REPORT);
     lv->AppendColumn("Date");
     lv->AppendColumn("Description");
     lv->AppendColumn("Amount");
@@ -167,46 +171,39 @@ wxPanel* MyFrame::CreateExpensesView(wxWindow *parent) {
 wxPropertyGrid* MyFrame::CreateExpensePropGrid(wxWindow *parent) {
     wxPropertyGrid *pg;
     wxArrayString cats;
+    wxArrayInt idcats;
+    ExpenseContext *ctx = getContext();
+    cat_t *cat;
 
-    cats.Add("Commute");
-    cats.Add("Coffee");
-    cats.Add("Dine out");
-    cats.Add("Grocery");
-    cats.Add("Food");
-    cats.Add("Household");
-    cats.Add("Cat food");
-    cats.Add("Utilities");
+    for (size_t i=0; i < ctx->cats->len; i++) {
+        cat = (cat_t *)ctx->cats->items[i];
+        idcats.Add((int)cat->catid);
+        cats.Add(wxString(cat->name->s));
+    }
 
     pg = new wxPropertyGrid(parent, ID_EXPENSE_GRID, wxDefaultPosition, wxDefaultSize, wxPG_SPLITTER_AUTO_CENTER | wxPG_DEFAULT_STYLE);
     pg->Append(new wxPropertyCategory("Expense"));
-    pg->Append(new wxStringProperty("Description", wxPG_LABEL, "starbucks"));
-    pg->Append(new wxFloatProperty("Amount", wxPG_LABEL, 85.00));
-    pg->Append(new wxEnumProperty("Category", wxPG_LABEL, cats));
-    pg->Append(new wxDateProperty("Date", wxPG_LABEL, wxDateTime::Now()));
+    pg->Append(new wxStringProperty("Description", wxPG_LABEL));
+    pg->Append(new wxFloatProperty("Amount", wxPG_LABEL));
+    pg->Append(new wxEnumProperty("Category", wxPG_LABEL, cats, idcats));
+    pg->Append(new wxDateProperty("Date", wxPG_LABEL));
 
     return pg;
 }
 
 void MyFrame::RefreshControls() {
     ExpenseContext *ctx = getContext();
-    wxWindow *lv, *btnPrev, *btnNext;
-    wxStaticText *st;
+    wxSplitterWindow *mainsplit;
+//    wxSplitterWindow *expsplit;
     wxString title, filename, ext;
 
-    CreateControls();
-
-    st = (wxStaticText *) wxWindow::FindWindowById(ID_EXPENSES_HEADING);
-    lv = wxWindow::FindWindowById(ID_EXPENSES_LIST);
-    btnPrev = wxWindow::FindWindowById(ID_EXPENSES_PREV);
-    btnNext = wxWindow::FindWindowById(ID_EXPENSES_NEXT);
+    mainsplit = (wxSplitterWindow *) wxWindow::FindWindowById(ID_MAIN_SPLIT);
+//    expsplit = (wxSplitterWindow *) wxWindow::FindWindowById(ID_EXP_SPLIT);
 
     // No open expense file
     if (!ctx_is_open_expfile(ctx)) {
         SetTitle(wxT("Expense Buddy"));
-        st->SetLabel(wxT("No Expense File"));
-        lv->Show(false);
-        btnPrev->Show(false);
-        btnNext->Show(false);
+        mainsplit->Show(false);
         return;
     }
 
@@ -214,9 +211,7 @@ void MyFrame::RefreshControls() {
     wxFileName::SplitPath(wxString::FromUTF8(ctx->expfile->s), NULL, NULL, &filename, &ext);
     title.Printf("Expense Buddy - [%s.%s]", filename, ext);
     SetTitle(title);
-    lv->Show(true);
-    btnPrev->Show(true);
-    btnNext->Show(true);
+    mainsplit->Show(true);
 }
 
 void MyFrame::RefreshExpenses() {
@@ -227,6 +222,9 @@ void MyFrame::RefreshExpenses() {
     exp_t *xp;
     char buf[24];
 
+    lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
+    lv->DeleteAllItems();
+
     if (!ctx_is_open_expfile(ctx))
         return;
 
@@ -236,18 +234,21 @@ void MyFrame::RefreshExpenses() {
 
     ctx_refresh_expenses(ctx);
 
-    lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
-    lv->DeleteAllItems();
-
     for (size_t i=0; i < ctx->xps->len; i++) {
         xp = (exp_t *) ctx->xps->items[i];
+
         date_strftime(xp->date, "%m-%d", buf, sizeof(buf));
         lv->InsertItem(i, buf);
         lv->SetItem(i, 1, xp->desc->s);
         snprintf(buf, sizeof(buf), "%9.2f", xp->amt);
         lv->SetItem(i, 2, buf);
         lv->SetItem(i, 3, xp->catname->s);
+
+        lv->SetItemPtrData(i, (wxUIntPtr)xp);
     }
+    // Select first row
+    if (ctx->xps->len > 0)
+        lv->SetItemState(0, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
 
     expenses_panel = (wxPanel *) wxWindow::FindWindowById(ID_EXPENSES_PANEL);
     expenses_panel->Layout();
@@ -323,15 +324,30 @@ void MyFrame::OnNextMonth(wxCommandEvent& event) {
     ctx_set_next_month(ctx);
     RefreshExpenses();
 }
-void MyFrame::OnListItemActivated(wxListEvent& event) {
-    long i = event.GetIndex();
-    printf("list activated GetIndex(): %ld\n", i);
-    wxListItem item = event.GetItem();
-    wxString s = event.GetText();
-    printf("on list selected: '%s'\n", s.mb_str().data());
+void MyFrame::OnListItemSelected(wxListEvent& event) {
+    wxListItem li = event.GetItem();
+    exp_t *xp = (exp_t *)li.GetData();
+    assert(xp != NULL);
 
-    EditExpenseDialog dlg(this);
-    dlg.ShowModal();
+    wxPropertyGrid *pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
+
+    wxPGProperty *prop = pg->GetProperty("Description");
+    assert(prop != NULL);
+    prop->SetValue(wxVariant(wxString(xp->desc->s)));
+
+    prop = pg->GetProperty("Amount");
+    assert(prop != NULL);
+    prop->SetValue(wxVariant(xp->amt));
+
+    prop = pg->GetProperty("Category");
+    assert(prop != NULL);
+    prop->SetValue(wxVariant((int)xp->catid));
+
+    prop = pg->GetProperty("Date");
+    assert(prop != NULL);
+    prop->SetValue(wxVariant(wxDateTime(date_time(xp->date))));
+}
+void MyFrame::OnListItemActivated(wxListEvent& event) {
 }
 
 void MyFrame::OnPropertyGridChanged(wxPropertyGridEvent& event) {
