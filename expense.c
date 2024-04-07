@@ -32,6 +32,7 @@ ExpenseContext *ctx_new() {
     ctx->expfiledb = NULL;
     ctx->xps = array_new(0);
     ctx->cats = array_new(0);
+    ctx->selxp = NULL;
 
     ctx->dt = date_new_today();
     date_set_day(ctx->dt, 1);
@@ -64,6 +65,7 @@ void ctx_close(ExpenseContext *ctx) {
 
     array_clear(ctx->xps);
     array_clear(ctx->cats);
+    ctx->selxp = NULL;
 }
 
 int ctx_create_expense_file(ExpenseContext *ctx, const char *filename) {
@@ -139,20 +141,24 @@ int ctx_is_open_expfile(ExpenseContext *ctx) {
         return 1;
     return 0;
 }
-void ctx_set_prev_month(ExpenseContext *ctx) {
+void ctx_refresh_expenses_prev_month(ExpenseContext *ctx) {
     date_set_prev_month(ctx->dt);
+    ctx_refresh_expenses(ctx);
 }
-void ctx_set_next_month(ExpenseContext *ctx) {
+void ctx_refresh_expenses_next_month(ExpenseContext *ctx) {
     date_set_next_month(ctx->dt);
+    ctx_refresh_expenses(ctx);
 }
-void ctx_set_year(ExpenseContext *ctx, int year) {
+void ctx_refresh_expenses_year(ExpenseContext *ctx, int year) {
     if (year >= 1900)
         date_set_year(ctx->dt, year);
+    ctx_refresh_expenses(ctx);
 }
-void ctx_set_month(ExpenseContext *ctx, int month) {
+void ctx_refresh_expenses_month(ExpenseContext *ctx, int month) {
     if (month >= 1 && month <= 12)
         date_set_month(ctx->dt, month);
     date_set_day(ctx->dt, 1);
+    ctx_refresh_expenses(ctx);
 }
 
 int ctx_refresh_categories(ExpenseContext *ctx) {
@@ -185,6 +191,13 @@ int ctx_refresh_expenses(ExpenseContext *ctx) {
     date_to_iso(ctx->dt, min_date, sizeof(min_date));
     date_to_iso(ctx->dttmp, max_date, sizeof(max_date));
 
+    ctx->selxp = NULL;
     return db_select_exp(ctx->expfiledb, min_date, max_date, ctx->xps);
 }
 
+void ctx_select_expense(ExpenseContext *ctx, exp_t *selxp) {
+    ctx->selxp = selxp;
+}
+exp_t *ctx_get_selected_expense(ExpenseContext *ctx) {
+    return ctx->selxp;
+}

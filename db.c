@@ -236,7 +236,7 @@ int db_select_cat(sqlite3 *db, array_t *cats) {
     const char *s;
     int z;
 
-    s = "SELECT cat_id, name FROM cat WHERE 1=1";
+    s = "SELECT cat_id, name FROM cat ORDER BY name";
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);

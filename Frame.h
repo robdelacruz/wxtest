@@ -5,6 +5,8 @@
 #include "wx/listctrl.h"
 #include "wx/propgrid/propgrid.h"
 
+#include "db.h"
+
 class MyFrame : public wxFrame {
 public:
     MyFrame(const wxString& title);
@@ -28,6 +30,11 @@ public:
     wxWindow *CreateExpensesView(wxWindow *parent);
     wxWindow *CreateExpensesList(wxWindow *parent);
     wxWindow *CreateExpensePropGrid(wxWindow *parent);
+
+    void ClearExpenseList();
+    void RefreshExpenseList();
+    void ClearExpenseGrid();
+    void RefreshExpenseGrid();
 
 private:
     wxDECLARE_EVENT_TABLE();
