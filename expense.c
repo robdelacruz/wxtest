@@ -150,8 +150,11 @@ void ctx_refresh_expenses_next_month(ExpenseContext *ctx) {
     ctx_refresh_expenses(ctx);
 }
 void ctx_refresh_expenses_year(ExpenseContext *ctx, int year) {
-    if (year >= 1900)
-        date_set_year(ctx->dt, year);
+    if (year < 1900)
+        return;
+
+    date_set_year(ctx->dt, year);
+    date_set_month(ctx->dt, 1);
     ctx_refresh_expenses(ctx);
 }
 void ctx_refresh_expenses_month(ExpenseContext *ctx, int month) {

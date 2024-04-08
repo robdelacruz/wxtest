@@ -4,6 +4,7 @@
 #include "wx/window.h"
 #include "wx/listctrl.h"
 #include "wx/splitter.h"
+#include "wx/spinctrl.h"
 #include "wx/filename.h"
 #include "wx/propgrid/propgrid.h"
 #include "wx/propgrid/advprops.h"
@@ -25,6 +26,9 @@ enum {
     ID_NO_OPEN_FILE,
     ID_MAIN_SPLIT,
 
+    ID_NAV_YEAR_SPIN,
+    ID_NAV_MONTH_LIST,
+
     ID_EXPENSES_PANEL,
     ID_EXPENSES_HEADING,
     ID_EXPENSES_LIST,
@@ -42,10 +46,14 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(wxID_OPEN, MyFrame::OnFileOpen)
     EVT_MENU(wxID_CLOSE, MyFrame::OnFileClose)
     EVT_MENU(wxID_EXIT, MyFrame::OnFileExit)
+
+    EVT_SPINCTRL(ID_NAV_YEAR_SPIN, MyFrame::OnNavYear)
+
     EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevMonth)
     EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNextMonth)
     EVT_LIST_ITEM_SELECTED(ID_EXPENSES_LIST, MyFrame::OnListItemSelected)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnListItemActivated)
+
     EVT_PG_CHANGED(ID_EXPENSE_GRID, MyFrame::OnPropertyGridChanged)
 wxEND_EVENT_TABLE()
 
@@ -57,6 +65,7 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefau
     SetStatusText(wxT("Expense Buddy"));
     CreateControls();
     ShowControls();
+    RefreshNav();
     RefreshExpenses();
 }
 
@@ -115,7 +124,19 @@ void MyFrame::CreateControls() {
 
 wxWindow* MyFrame::CreateExpensesNav(wxWindow *parent) {
     wxPanel *pnl;
-    pnl = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    wxSpinCtrl *spinYear;
+    wxListBox *lbMonth;
+    wxBoxSizer *vbox;
+
+    pnl = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(100,-1));
+    spinYear = new wxSpinCtrl(pnl, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1900, 2100);
+    lbMonth = new wxListBox(pnl, ID_NAV_MONTH_LIST, wxDefaultPosition, wxDefaultSize);
+
+    vbox = new wxBoxSizer(wxVERTICAL);
+    vbox->Add(spinYear, 0, wxEXPAND|wxALL, 5);
+    vbox->Add(lbMonth, 1, wxEXPAND, 0);
+    pnl->SetSizer(vbox);
+
     return pnl;
 }
 
@@ -227,6 +248,30 @@ void MyFrame::ShowControls() {
     splitMain->Show(true);
 }
 
+void MyFrame::RefreshNav() {
+    ExpenseContext *ctx = getContext();
+    wxSpinCtrl *spinYear;
+    wxListBox *lbMonth;
+    date_t *dt;
+    char buf[24];
+
+    spinYear = (wxSpinCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR_SPIN);
+    lbMonth = (wxListBox *) wxWindow::FindWindowById(ID_NAV_MONTH_LIST);
+
+    // Year spinner ctrl
+    spinYear->SetValue(date_year(ctx->dt));
+
+    // 12 Months of the year in listbox
+    lbMonth->Clear();
+    dt = date_new_cal(date_year(ctx->dt), 1, 1);
+    for (int imonth=1; imonth <= 12; imonth++) {
+        date_set_month(dt, imonth);
+        date_strftime(dt, "%B", buf, sizeof(buf));
+        lbMonth->Append(wxString::FromUTF8(buf));
+    }
+    lbMonth->SetSelection(date_month(ctx->dt)-1);
+}
+
 void MyFrame::RefreshExpenses() {
     ExpenseContext *ctx = getContext();
     wxStaticText *st;
@@ -267,6 +312,7 @@ void MyFrame::OnFileNew(wxCommandEvent& event) {
     CreateMenuBar();
     CreateControls();
     ShowControls();
+    RefreshNav();
     RefreshExpenses();
 }
 void MyFrame::OnFileOpen(wxCommandEvent& event) {
@@ -288,6 +334,7 @@ void MyFrame::OnFileOpen(wxCommandEvent& event) {
     CreateMenuBar();
     CreateControls();
     ShowControls();
+    RefreshNav();
     RefreshExpenses();
 }
 void MyFrame::OnFileClose(wxCommandEvent& event) {
@@ -296,6 +343,7 @@ void MyFrame::OnFileClose(wxCommandEvent& event) {
 
     CreateMenuBar();
     ShowControls();
+    RefreshNav();
     RefreshExpenses();
 }
 void MyFrame::OnFileExit(wxCommandEvent& event) {
@@ -307,11 +355,13 @@ void MyFrame::OnFileExit(wxCommandEvent& event) {
 void MyFrame::OnPrevMonth(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
     ctx_refresh_expenses_prev_month(ctx);
+    RefreshNav();
     RefreshExpenses();
 }
 void MyFrame::OnNextMonth(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
     ctx_refresh_expenses_next_month(ctx);
+    RefreshNav();
     RefreshExpenses();
 }
 void MyFrame::OnListItemSelected(wxListEvent& event) {
@@ -393,5 +443,14 @@ void MyFrame::OnPropertyGridChanged(wxPropertyGridEvent& event) {
 
     pg->SetPropertyValue(prop, "changed!");
 
+}
+
+void MyFrame::OnNavYear(wxSpinEvent& event) {
+    ExpenseContext *ctx = getContext();
+    int year = event.GetPosition();
+
+    ctx_refresh_expenses_year(ctx, year);
+    RefreshNav();
+    RefreshExpenses();
 }
 

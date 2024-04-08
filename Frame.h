@@ -15,6 +15,7 @@ public:
     void OnFileClose(wxCommandEvent& event);
     void OnFileExit(wxCommandEvent& event);
 
+    void OnNavYear(wxSpinEvent& event);
     void OnPrevMonth(wxCommandEvent& event);
     void OnNextMonth(wxCommandEvent& event);
     void OnListItemSelected(wxListEvent& event);
@@ -24,6 +25,7 @@ public:
     void CreateMenuBar();
     void CreateControls();
     void ShowControls();
+    void RefreshNav();
     void RefreshExpenses();
 
     wxWindow *CreateExpensesNav(wxWindow *parent);
