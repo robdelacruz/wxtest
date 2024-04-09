@@ -50,9 +50,12 @@ int db_edit_cat(sqlite3 *db, cat_t *cat);
 int db_del_cat(sqlite3 *db, uint catid);
 
 int db_select_exp(sqlite3 *db, const char *min_date, const char * max_date, array_t *xps);
+int db_sum_amount_exp(sqlite3 *db, const char *min_date, const char *max_date, double *sum);
+
 int db_add_exp(sqlite3 *db, exp_t *xp);
 int db_edit_exp(sqlite3 *db, exp_t *xp);
 int db_del_exp(sqlite3 *db, uint expid);
+
 
 #ifdef __cplusplus
 }

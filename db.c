@@ -371,6 +371,45 @@ int db_select_exp(sqlite3 *db, const char *min_date, const char * max_date, arra
     sqlite3_finalize(stmt);
     return 0;
 }
+int db_sum_amount_exp(sqlite3 *db, const char *min_date, const char *max_date, double *sum) {
+    sqlite3_stmt *stmt;
+    const char *s;
+    int z;
+
+    *sum = 0.0;
+
+    //$$ Optimize this to eliminate WHERE when no min_date/max_date given.
+    if (min_date == NULL)
+        min_date = "0000-01-01";
+    if (max_date == NULL)
+        max_date = "3000-01-01";
+
+    s = "SELECT SUM(amt) "
+        "FROM exp "
+        "WHERE date >= ? AND date < ?";
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    z = sqlite3_bind_text(stmt, 1, min_date, -1, NULL);
+    assert(z == 0);
+    z = sqlite3_bind_text(stmt, 2, max_date, -1, NULL);
+    assert(z == 0);
+
+    z = sqlite3_step(stmt);
+    if (z < SQLITE_ROW) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    if (z == SQLITE_ROW) {
+        *sum = sqlite3_column_double(stmt, 0);
+    }
+
+    sqlite3_finalize(stmt);
+    return 0;
+}
+
 int db_add_exp(sqlite3 *db, exp_t *xp) {
     sqlite3_stmt *stmt;
     const char *s;

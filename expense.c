@@ -141,27 +141,27 @@ int ctx_is_open_expfile(ExpenseContext *ctx) {
         return 1;
     return 0;
 }
-void ctx_refresh_expenses_prev_month(ExpenseContext *ctx) {
+int ctx_refresh_expenses_prev_month(ExpenseContext *ctx) {
     date_set_prev_month(ctx->dt);
-    ctx_refresh_expenses(ctx);
+    return ctx_refresh_expenses(ctx);
 }
-void ctx_refresh_expenses_next_month(ExpenseContext *ctx) {
+int ctx_refresh_expenses_next_month(ExpenseContext *ctx) {
     date_set_next_month(ctx->dt);
-    ctx_refresh_expenses(ctx);
+    return ctx_refresh_expenses(ctx);
 }
-void ctx_refresh_expenses_year(ExpenseContext *ctx, int year) {
+int ctx_refresh_expenses_year(ExpenseContext *ctx, int year) {
     if (year < 1900)
-        return;
+        year = 1900;
 
     date_set_year(ctx->dt, year);
     date_set_month(ctx->dt, 1);
-    ctx_refresh_expenses(ctx);
+    return ctx_refresh_expenses(ctx);
 }
-void ctx_refresh_expenses_month(ExpenseContext *ctx, int month) {
+int ctx_refresh_expenses_month(ExpenseContext *ctx, int month) {
     if (month >= 1 && month <= 12)
         date_set_month(ctx->dt, month);
     date_set_day(ctx->dt, 1);
-    ctx_refresh_expenses(ctx);
+    return ctx_refresh_expenses(ctx);
 }
 
 int ctx_refresh_categories(ExpenseContext *ctx) {
@@ -196,6 +196,35 @@ int ctx_refresh_expenses(ExpenseContext *ctx) {
 
     ctx->selxp = NULL;
     return db_select_exp(ctx->expfiledb, min_date, max_date, ctx->xps);
+}
+
+int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *sum) {
+    date_t *dtstart, *dtend;
+    char bufstart[ISO_DATE_LEN+1], bufend[ISO_DATE_LEN+1];
+    int z;
+
+    *sum = 0.0;
+
+    // Year amount totals
+    if (month == 0) {
+        dtstart = date_new_cal(year,1,1);
+        dtend = date_new_cal(year+1,1,1);
+    } else {
+    // Month amount totals
+        dtstart = date_new_cal(year,month,1);
+        if (month == 12)
+            dtend = date_new_cal(year+1,1,1);
+        else
+            dtend = date_new_cal(year,month+1,1);
+    }
+
+    date_to_iso(dtstart, bufstart, sizeof(bufstart));
+    date_to_iso(dtend, bufend, sizeof(bufend));
+    z = db_sum_amount_exp(ctx->expfiledb, bufstart, bufend, sum);
+
+    date_free(dtstart);
+    date_free(dtend);
+    return z;
 }
 
 void ctx_select_expense(ExpenseContext *ctx, exp_t *selxp) {

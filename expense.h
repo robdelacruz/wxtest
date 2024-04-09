@@ -29,12 +29,15 @@ int ctx_is_open_expfile(ExpenseContext *ctx);
 int ctx_refresh_categories(ExpenseContext *ctx);
 
 int ctx_refresh_expenses(ExpenseContext *ctx);
-void ctx_refresh_expenses_prev_month(ExpenseContext *ctx);
-void ctx_refresh_expenses_next_month(ExpenseContext *ctx);
-void ctx_refresh_expenses_year(ExpenseContext *ctx, int year);
-void ctx_refresh_expenses_month(ExpenseContext *ctx, int month);
+int ctx_refresh_expenses_prev_month(ExpenseContext *ctx);
+int ctx_refresh_expenses_next_month(ExpenseContext *ctx);
+int ctx_refresh_expenses_year(ExpenseContext *ctx, int year);
+int ctx_refresh_expenses_month(ExpenseContext *ctx, int month);
 
 void ctx_select_expense(ExpenseContext *ctx, exp_t *selxp);
 exp_t *ctx_get_selected_expense(ExpenseContext *ctx);
+
+int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *sum);
+
 
 #endif

@@ -48,6 +48,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(wxID_EXIT, MyFrame::OnFileExit)
 
     EVT_SPINCTRL(ID_NAV_YEAR_SPIN, MyFrame::OnNavYear)
+    EVT_LISTBOX(ID_NAV_MONTH_LIST, MyFrame::OnNavMonth)
 
     EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevMonth)
     EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNextMonth)
@@ -114,6 +115,7 @@ void MyFrame::CreateControls() {
     pnlNav = CreateExpensesNav(split);
     pnlView = CreateExpensesView(split);
     split->SplitVertically(pnlNav, pnlView);
+    split->SetSashPosition(150);
 
     vbox = new wxBoxSizer(wxVERTICAL);
     vbox->Add(st, 0, wxEXPAND|wxALL, 5);
@@ -132,6 +134,12 @@ wxWindow* MyFrame::CreateExpensesNav(wxWindow *parent) {
     spinYear = new wxSpinCtrl(pnl, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1900, 2100);
     lbMonth = new wxListBox(pnl, ID_NAV_MONTH_LIST, wxDefaultPosition, wxDefaultSize);
 
+    // 12 Months of the year in listbox
+    //for (wxDateTime::Month month = wxDateTime::Jan; month <= wxDateTime::Dec; month += 1) {
+    for (int month = wxDateTime::Jan; month <= wxDateTime::Dec; month++) {
+        lbMonth->Append(wxDateTime::GetMonthName((wxDateTime::Month)month, wxDateTime::Name_Full));
+    }
+
     vbox = new wxBoxSizer(wxVERTICAL);
     vbox->Add(spinYear, 0, wxEXPAND|wxALL, 5);
     vbox->Add(lbMonth, 1, wxEXPAND, 0);
@@ -149,6 +157,7 @@ wxWindow* MyFrame::CreateExpensesView(wxWindow *parent) {
     explist = CreateExpensesList(split);
     pg = CreateExpensePropGrid(split);
     split->SplitHorizontally(explist, pg);
+    split->SetSashPosition(300);
 
     return split;
 }
@@ -250,26 +259,22 @@ void MyFrame::ShowControls() {
 
 void MyFrame::RefreshNav() {
     ExpenseContext *ctx = getContext();
-    wxSpinCtrl *spinYear;
-    wxListBox *lbMonth;
-    date_t *dt;
-    char buf[24];
+    wxSpinCtrl *spinYear = (wxSpinCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR_SPIN);
+    wxListBox *lbMonth = (wxListBox *) wxWindow::FindWindowById(ID_NAV_MONTH_LIST);
+    wxString strMonthNameItem;
+    double sumamt;
 
-    spinYear = (wxSpinCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR_SPIN);
-    lbMonth = (wxListBox *) wxWindow::FindWindowById(ID_NAV_MONTH_LIST);
-
-    // Year spinner ctrl
     spinYear->SetValue(date_year(ctx->dt));
-
-    // 12 Months of the year in listbox
-    lbMonth->Clear();
-    dt = date_new_cal(date_year(ctx->dt), 1, 1);
-    for (int imonth=1; imonth <= 12; imonth++) {
-        date_set_month(dt, imonth);
-        date_strftime(dt, "%B", buf, sizeof(buf));
-        lbMonth->Append(wxString::FromUTF8(buf));
-    }
     lbMonth->SetSelection(date_month(ctx->dt)-1);
+
+    int month = wxDateTime::Jan;
+    for (int i=0; i < 12; i++) {
+        wxString monthName = wxDateTime::GetMonthName((wxDateTime::Month)month, wxDateTime::Name_Full);
+        ctx_expenses_sum_amount(ctx, date_year(ctx->dt), i+1, &sumamt);
+        strMonthNameItem.Printf("%s (%.2f)", monthName, sumamt);
+        lbMonth->SetString(i, strMonthNameItem);
+        month++;
+    }
 }
 
 void MyFrame::RefreshExpenses() {
@@ -451,6 +456,14 @@ void MyFrame::OnNavYear(wxSpinEvent& event) {
 
     ctx_refresh_expenses_year(ctx, year);
     RefreshNav();
+    RefreshExpenses();
+}
+
+void MyFrame::OnNavMonth(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
+    int month = event.GetSelection()+1;
+
+    ctx_refresh_expenses_month(ctx, month);
     RefreshExpenses();
 }
 
