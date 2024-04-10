@@ -299,24 +299,26 @@ void MyFrame::RefreshExpenses() {
     wxWindow::FindWindowById(ID_EXPENSES_PANEL)->Layout();
 }
 
-static wxString fileErrorString(wxString& file, int errnum) {
+static wxString fileErrorString(wxString file, int errnum) {
     wxString errstr;
-    errstr.Printf("%s: %s", wxString::FromUTF8(exp_strerror(errnum)), file);
+    //errstr.Printf("%s: %s", wxString::FromUTF8(exp_strerror(errnum)), file);
+    errstr.Printf("%s: %s", exp_strerror(errnum), file);
     return errstr;
 }
 
 void MyFrame::OnFileNew(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
+    char expfile[1024];
     int z;
 
     wxFileDialog dlg(this, wxT("New Expense File"), wxEmptyString, wxEmptyString, wxFileSelectorDefaultWildcardStr, wxFD_SAVE, wxDefaultPosition, wxDefaultSize);
     if (dlg.ShowModal() == wxID_CANCEL)
         return;
 
-    wxString expfile = dlg.GetPath();
-    z = ctx_create_expense_file(ctx, expfile.ToUTF8());
+    strncpy(expfile, dlg.GetPath().mb_str(), sizeof(expfile)-1);
+    z = ctx_create_expense_file(ctx, expfile);
     if (z != 0) {
-        wxMessageDialog msgdlg(NULL, fileErrorString(expfile, z), wxT("Error occured"), wxOK | wxICON_ERROR);
+        wxMessageDialog msgdlg(NULL, fileErrorString(dlg.GetPath(), z), wxT("Error occured"), wxOK | wxICON_ERROR);
         msgdlg.ShowModal();
         return;
     }
@@ -329,16 +331,17 @@ void MyFrame::OnFileNew(wxCommandEvent& event) {
 }
 void MyFrame::OnFileOpen(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
+    char expfile[1024];
     int z;
 
     wxFileDialog dlg(this, wxT("Open Expense File"), wxEmptyString, wxEmptyString, wxT("*.db"), wxFD_OPEN, wxDefaultPosition, wxDefaultSize);
     if (dlg.ShowModal() == wxID_CANCEL)
         return;
 
-    wxString expfile = dlg.GetPath();
-    z = ctx_open_expense_file(ctx, expfile.ToUTF8());
+    strncpy(expfile, dlg.GetPath().mb_str(), sizeof(expfile)-1);
+    z = ctx_open_expense_file(ctx, expfile);
     if (z != 0) {
-        wxMessageDialog msgdlg(NULL, fileErrorString(expfile, z), wxT("Error occured"), wxOK | wxICON_ERROR);
+        wxMessageDialog msgdlg(NULL, fileErrorString(dlg.GetPath(), z), wxT("Error occured"), wxOK | wxICON_ERROR);
         msgdlg.ShowModal();
         return;
     }

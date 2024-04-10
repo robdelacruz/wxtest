@@ -205,6 +205,9 @@ int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *su
 
     *sum = 0.0;
 
+    if (!ctx_is_open_expfile(ctx))
+        return 1;
+
     // Year amount totals
     if (month == 0) {
         dtstart = date_new_cal(year,1,1);
