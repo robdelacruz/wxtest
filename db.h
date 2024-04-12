@@ -21,7 +21,7 @@ typedef struct {
 
 typedef struct {
     uint64_t expid;
-    date_t *date;
+    date_t date;
     str_t *desc;
     double amt;
     uint64_t catid;
@@ -49,8 +49,8 @@ int db_add_cat(sqlite3 *db, cat_t *cat);
 int db_edit_cat(sqlite3 *db, cat_t *cat);
 int db_del_cat(sqlite3 *db, uint catid);
 
-int db_select_exp(sqlite3 *db, const char *min_date, const char * max_date, array_t *xps);
-int db_sum_amount_exp(sqlite3 *db, const char *min_date, const char *max_date, double *sum);
+int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps);
+int db_sum_amount_exp(sqlite3 *db, date_t min_date, date_t max_date, double *sum);
 
 int db_add_exp(sqlite3 *db, exp_t *xp);
 int db_edit_exp(sqlite3 *db, exp_t *xp);

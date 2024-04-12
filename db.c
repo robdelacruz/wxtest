@@ -68,7 +68,7 @@ static int db_init_tables(sqlite3 *db) {
     int z;
 
     s = "CREATE TABLE IF NOT EXISTS cat (cat_id INTEGER PRIMARY KEY NOT NULL, name TEXT);"
-        "CREATE TABLE IF NOT EXISTS exp (exp_id INTEGER PRIMARY KEY NOT NULL, date TEXT NOT NULL, desc TEXT NOT NULL DEFAULT '', amt REAL NOT NULL DEFAULT 0.0, cat_id INTEGER NOT NULL DEFAULT 1);";
+        "CREATE TABLE IF NOT EXISTS exp (exp_id INTEGER PRIMARY KEY NOT NULL, date INTEGER, desc TEXT NOT NULL DEFAULT '', amt REAL NOT NULL DEFAULT 0.0, cat_id INTEGER NOT NULL DEFAULT 1);";
     z = sqlite3_exec(db, s, 0, 0, NULL);
     if (z != 0)
         sqlite3_close_v2(db);
@@ -165,7 +165,7 @@ int cat_is_valid(cat_t *cat) {
 exp_t *exp_new() {
     exp_t *xp = (exp_t*) malloc(sizeof(exp_t));
     xp->expid = 0;
-    xp->date = date_new_today();
+    xp->date = date_today();
     xp->desc = str_new(0);
     xp->amt = 0.0;
     xp->catid = 0;
@@ -173,7 +173,6 @@ exp_t *exp_new() {
     return xp;
 }
 void exp_free(exp_t *xp) {
-    date_free(xp->date);
     str_free(xp->desc);
     str_free(xp->catname);
     free(xp);
@@ -181,7 +180,7 @@ void exp_free(exp_t *xp) {
 
 void exp_dup(sqlite3 *db, exp_t *dest, exp_t *src) {
     dest->expid = src->expid;
-    date_dup(dest->date, src->date);
+    dest->date = src->date;
     str_assign(dest->desc, src->desc->s);
     str_assign(dest->catname, src->catname->s);
     dest->amt = src->amt;
@@ -326,17 +325,11 @@ int db_del_cat(sqlite3 *db, uint catid) {
     return 0;
 }
 
-int db_select_exp(sqlite3 *db, const char *min_date, const char * max_date, array_t *xps) {
+int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps) {
     exp_t *xp;
     sqlite3_stmt *stmt;
     const char *s;
     int z;
-
-    //$$ Optimize this to eliminate WHERE when no min_date/max_date given.
-    if (min_date == NULL)
-        min_date = "0000-01-01";
-    if (max_date == NULL)
-        max_date = "3000-01-01";
 
     s = "SELECT exp_id, date, desc, amt, exp.cat_id, IFNULL(cat.name, '') "
         "FROM exp "
@@ -347,16 +340,16 @@ int db_select_exp(sqlite3 *db, const char *min_date, const char * max_date, arra
         db_handle_err(db, stmt, s);
         return z;
     }
-    z = sqlite3_bind_text(stmt, 1, min_date, -1, NULL);
+    z = sqlite3_bind_int(stmt, 1, min_date);
     assert(z == 0);
-    z = sqlite3_bind_text(stmt, 2, max_date, -1, NULL);
+    z = sqlite3_bind_int(stmt, 2, max_date);
     assert(z == 0);
 
     array_clear(xps);
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
         xp = exp_new();
         xp->expid = sqlite3_column_int64(stmt, 0);
-        date_assign_iso(xp->date, (char*)sqlite3_column_text(stmt, 1));
+        xp->date = sqlite3_column_int(stmt, 1);
         str_assign(xp->desc, (char*)sqlite3_column_text(stmt, 2));
         xp->amt = sqlite3_column_double(stmt, 3);
         xp->catid = sqlite3_column_int64(stmt, 4);
@@ -371,18 +364,12 @@ int db_select_exp(sqlite3 *db, const char *min_date, const char * max_date, arra
     sqlite3_finalize(stmt);
     return 0;
 }
-int db_sum_amount_exp(sqlite3 *db, const char *min_date, const char *max_date, double *sum) {
+int db_sum_amount_exp(sqlite3 *db, date_t min_date, date_t max_date, double *sum) {
     sqlite3_stmt *stmt;
     const char *s;
     int z;
 
     *sum = 0.0;
-
-    //$$ Optimize this to eliminate WHERE when no min_date/max_date given.
-    if (min_date == NULL)
-        min_date = "0000-01-01";
-    if (max_date == NULL)
-        max_date = "3000-01-01";
 
     s = "SELECT SUM(amt) "
         "FROM exp "
@@ -392,9 +379,9 @@ int db_sum_amount_exp(sqlite3 *db, const char *min_date, const char *max_date, d
         db_handle_err(db, stmt, s);
         return z;
     }
-    z = sqlite3_bind_text(stmt, 1, min_date, -1, NULL);
+    z = sqlite3_bind_int(stmt, 1, min_date);
     assert(z == 0);
-    z = sqlite3_bind_text(stmt, 2, max_date, -1, NULL);
+    z = sqlite3_bind_int(stmt, 2, max_date);
     assert(z == 0);
 
     z = sqlite3_step(stmt);
@@ -414,7 +401,6 @@ int db_add_exp(sqlite3 *db, exp_t *xp) {
     sqlite3_stmt *stmt;
     const char *s;
     int z;
-    char isodate[ISO_DATE_LEN+1];
 
     s = "INSERT INTO exp (date, desc, amt, cat_id) VALUES (?, ?, ?, ?);";
     z = prepare_sql(db, s, &stmt);
@@ -422,8 +408,7 @@ int db_add_exp(sqlite3 *db, exp_t *xp) {
         db_handle_err(db, stmt, s);
         return z;
     }
-    date_to_iso(xp->date, isodate, sizeof(isodate));
-    z = sqlite3_bind_text(stmt, 1, isodate, -1, NULL);
+    z = sqlite3_bind_int(stmt, 1, xp->date);
     assert(z == 0);
     z = sqlite3_bind_text(stmt, 2, xp->desc->s, -1, NULL);
     assert(z == 0);
@@ -444,7 +429,6 @@ int db_edit_exp(sqlite3 *db, exp_t *xp) {
     sqlite3_stmt *stmt;
     const char *s;
     int z;
-    char isodate[ISO_DATE_LEN+1];
 
     s = "UPDATE exp SET date = ?, desc = ?, amt = ?, cat_id = ? WHERE exp_id = ?";
     z = prepare_sql(db, s, &stmt);
@@ -452,8 +436,7 @@ int db_edit_exp(sqlite3 *db, exp_t *xp) {
         db_handle_err(db, stmt, s);
         return z;
     }
-    date_to_iso(xp->date, isodate, sizeof(isodate));
-    z = sqlite3_bind_text(stmt, 1, isodate, -1, NULL);
+    z = sqlite3_bind_int(stmt, 1, xp->date);
     assert(z == 0);
     z = sqlite3_bind_text(stmt, 2, xp->desc->s, -1, NULL);
     assert(z == 0);

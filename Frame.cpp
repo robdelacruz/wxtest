@@ -271,14 +271,16 @@ void MyFrame::RefreshNav() {
     ExpenseContext *ctx = getContext();
     wxSpinCtrl *spinYear = (wxSpinCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR_SPIN);
     wxListView *lvMonths = (wxListView *) wxWindow::FindWindowById(ID_NAV_MONTH_LIST);
+    int year, month;
     double sumamt;
     char buf[24];
 
-    spinYear->SetValue(date_year(ctx->dt));
-    lvMonths->Select(date_month(ctx->dt)-1);
+    date_to_cal(ctx->dt, &year, &month, NULL);
+    spinYear->SetValue(year);
+    lvMonths->Select(month-1);
 
     for (int i=0; i < 12; i++) {
-        ctx_expenses_sum_amount(ctx, date_year(ctx->dt), i+1, &sumamt);
+        ctx_expenses_sum_amount(ctx, year, i+1, &sumamt);
         snprintf(buf, sizeof(buf), "%9.2f", sumamt);
         lvMonths->SetItem(i, 1, buf);
     }
@@ -441,7 +443,7 @@ void MyFrame::RefreshExpenseGrid() {
     pg->GetProperty("Description")->SetValue(wxVariant(wxString(xp->desc->s)));
     pg->GetProperty("Amount")->SetValue(wxVariant(xp->amt));
     pg->GetProperty("Category")->SetValue(wxVariant((int)xp->catid));
-    pg->GetProperty("Date")->SetValue(wxVariant(wxDateTime(date_time(xp->date))));
+    pg->GetProperty("Date")->SetValue(wxVariant(wxDateTime(xp->date)));
     pg->Show(true);
 }
 

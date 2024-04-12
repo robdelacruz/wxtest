@@ -27,18 +27,20 @@ const char *exp_strerror(int errnum) {
 }
 
 ExpenseContext *ctx_new() {
-    ExpenseContext *ctx = (ExpenseContext*) malloc(sizeof(ExpenseContext));
+    ExpenseContext *ctx;
+    date_t dt;
+    int year, month;
+
+    ctx = (ExpenseContext*) malloc(sizeof(ExpenseContext));
     ctx->expfile = str_new(0);
     ctx->expfiledb = NULL;
     ctx->xps = array_new(0);
     ctx->cats = array_new(0);
     ctx->selxp = NULL;
 
-    ctx->dt = date_new_today();
-    date_set_day(ctx->dt, 1);
-    ctx->dttmp = date_new_today();
-    date_dup(ctx->dttmp, ctx->dt);
-    date_set_next_month(ctx->dttmp);
+    dt = date_today();
+    date_to_cal(dt, &year, &month, NULL);
+    ctx->dt = date_from_cal(year, month, 1);
 
     return ctx;
 }
@@ -46,22 +48,22 @@ void ctx_free(ExpenseContext *ctx) {
     str_free(ctx->expfile);
     if (ctx->expfiledb)
         sqlite3_close_v2(ctx->expfiledb);
-    date_free(ctx->dt);
-    date_free(ctx->dttmp);
     array_free(ctx->xps);
     array_free(ctx->cats);
     free(ctx);
 }
 void ctx_close(ExpenseContext *ctx) {
+    date_t dt;
+    int year, month;
+
     str_assign(ctx->expfile, "");
     if (ctx->expfiledb)
         sqlite3_close_v2(ctx->expfiledb);
     ctx->expfiledb = NULL;
 
-    date_assign_today(ctx->dt);
-    date_set_day(ctx->dt, 1);
-    date_dup(ctx->dttmp, ctx->dt);
-    date_set_next_month(ctx->dttmp);
+    dt = date_today();
+    date_to_cal(dt, &year, &month, NULL);
+    ctx->dt = date_from_cal(year, month, 1);
 
     array_clear(ctx->xps);
     array_clear(ctx->cats);
@@ -142,25 +144,26 @@ int ctx_is_open_expfile(ExpenseContext *ctx) {
     return 0;
 }
 int ctx_refresh_expenses_prev_month(ExpenseContext *ctx) {
-    date_set_prev_month(ctx->dt);
+    ctx->dt = date_prev_month(ctx->dt);
     return ctx_refresh_expenses(ctx);
 }
 int ctx_refresh_expenses_next_month(ExpenseContext *ctx) {
-    date_set_next_month(ctx->dt);
+    ctx->dt = date_next_month(ctx->dt);
     return ctx_refresh_expenses(ctx);
 }
 int ctx_refresh_expenses_year(ExpenseContext *ctx, int year) {
     if (year < 1900)
         year = 1900;
-
-    date_set_year(ctx->dt, year);
-    date_set_month(ctx->dt, 1);
+    ctx->dt = date_from_cal(year, 1, 1);
     return ctx_refresh_expenses(ctx);
 }
 int ctx_refresh_expenses_month(ExpenseContext *ctx, int month) {
-    if (month >= 1 && month <= 12)
-        date_set_month(ctx->dt, month);
-    date_set_day(ctx->dt, 1);
+    int dtyear;
+
+    if (month < 1 || month > 12)
+        return 0;
+    date_to_cal(ctx->dt, &dtyear, NULL, NULL);
+    ctx->dt = date_from_cal(dtyear, month, 1);
     return ctx_refresh_expenses(ctx);
 }
 
@@ -178,30 +181,20 @@ int ctx_refresh_categories(ExpenseContext *ctx) {
 //   ctx_refresh_expenses(ctx, 1899, 0)  // outside the valid ranges, year/month unchanged
 //
 int ctx_refresh_expenses(ExpenseContext *ctx) {
-    char min_date[ISO_DATE_LEN+1];
-    char max_date[ISO_DATE_LEN+1];
-
     if (!ctx_is_open_expfile(ctx))
         return 1;
 
-    // Generate date range for min_date <= data < max_date
+    // Generate date range for min_date <= date < max_date
     // Given year=2024, month=3
-    // min_date = "2024-03-01"
-    // max_date = "2024-04-01"
-
-    date_dup(ctx->dttmp, ctx->dt);
-    date_set_next_month(ctx->dttmp);
-    date_to_iso(ctx->dt, min_date, sizeof(min_date));
-    date_to_iso(ctx->dttmp, max_date, sizeof(max_date));
+    // min_date = 2024-03-01
+    // max_date = 2024-04-01
 
     ctx->selxp = NULL;
-    return db_select_exp(ctx->expfiledb, min_date, max_date, ctx->xps);
+    return db_select_exp(ctx->expfiledb, ctx->dt, date_next_month(ctx->dt), ctx->xps);
 }
 
 int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *sum) {
-    date_t *dtstart, *dtend;
-    char bufstart[ISO_DATE_LEN+1], bufend[ISO_DATE_LEN+1];
-    int z;
+    date_t dtstart, dtend;
 
     *sum = 0.0;
 
@@ -210,24 +203,18 @@ int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *su
 
     // Year amount totals
     if (month == 0) {
-        dtstart = date_new_cal(year,1,1);
-        dtend = date_new_cal(year+1,1,1);
+        dtstart = date_from_cal(year, 1, 1);
+        dtend = date_from_cal(year+1, 1, 1);
     } else {
     // Month amount totals
-        dtstart = date_new_cal(year,month,1);
+        dtstart = date_from_cal(year, month, 1);
         if (month == 12)
-            dtend = date_new_cal(year+1,1,1);
+            dtend = date_from_cal(year+1, 1, 1);
         else
-            dtend = date_new_cal(year,month+1,1);
+            dtend = date_from_cal(year, month+1, 1);
     }
 
-    date_to_iso(dtstart, bufstart, sizeof(bufstart));
-    date_to_iso(dtend, bufend, sizeof(bufend));
-    z = db_sum_amount_exp(ctx->expfiledb, bufstart, bufend, sum);
-
-    date_free(dtstart);
-    date_free(dtend);
-    return z;
+    return db_sum_amount_exp(ctx->expfiledb, dtstart, dtend, sum);
 }
 
 void ctx_select_expense(ExpenseContext *ctx, exp_t *selxp) {

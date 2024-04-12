@@ -35,10 +35,7 @@ typedef struct {
     size_t cap;
 } str_t;
 
-typedef struct {
-    time_t time;
-    struct tm tm;
-} date_t;
+typedef time_t date_t;
 
 typedef struct {
     void **items;
@@ -62,6 +59,16 @@ void str_free(str_t *str);
 void str_assign(str_t *str, const char *s);
 void str_sprintf(str_t *str, const char *fmt, ...);
 
+date_t date_today();
+date_t date_from_cal(uint year, uint month, uint day);
+date_t date_from_iso(char *isodate);
+void date_strftime(date_t dt, const char *fmt, char *buf, size_t buf_len);
+void date_to_iso(date_t dt, char *buf, size_t buf_len);
+void date_to_cal(date_t dt, int *retyear, int *retmonth, int *retday);
+date_t date_prev_month(date_t dt);
+date_t date_next_month(date_t dt);
+
+#if 0
 date_t *date_new(time_t t);
 date_t *date_new_today();
 date_t *date_new_cal(uint year, uint month, uint day);
@@ -83,6 +90,7 @@ void date_set_next_month(date_t *dt);
 void date_set_year(date_t *dt, int year);
 void date_set_month(date_t *dt, int month);
 void date_set_day(date_t *dt, int day);
+#endif
 
 array_t *array_new(size_t cap);
 void array_free(array_t *a);

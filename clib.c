@@ -34,134 +34,84 @@ void panic_err(const char *s) {
     abort();
 }
 
-date_t *date_new(time_t t) {
-    date_t *dt = (date_t*) malloc(sizeof(date_t));
-
-    dt->time = t;
-    localtime_r(&dt->time, &dt->tm);
-    return dt;
+date_t date_today() {
+    return time(NULL);
 }
-date_t *date_new_today() {
-    date_t *dt = (date_t*) malloc(sizeof(date_t));
-
-    dt->time = time(NULL);
-    localtime_r(&dt->time, &dt->tm);
-    return dt;
-}
-date_t *date_new_cal(uint year, uint month, uint day) {
-    date_t *dt = (date_t*) malloc(sizeof(date_t));
-
-    if (date_assign_cal(dt, year, month, day) != 0) {
-        dt->time = time(NULL);
-        localtime_r(&dt->time, &dt->tm);
-    }
-    return dt;
-}
-date_t *date_new_iso(char *isodate) {
-    date_t *dt = (date_t*) malloc(sizeof(date_t));
-
-    if (date_assign_iso(dt, isodate) != 0) {
-        dt->time = time(NULL);
-        localtime_r(&dt->time, &dt->tm);
-    }
-    return dt;
-}
-void date_free(date_t *dt) {
-    free(dt);
-}
-void date_assign_time(date_t *dt, time_t time) {
-    dt->time = time;
-    localtime_r(&dt->time, &dt->tm);
-}
-date_t *date_assign_today(date_t *dt) {
-    dt->time = time(NULL);
-    localtime_r(&dt->time, &dt->tm);
-    return dt;
-}
-int date_assign_cal(date_t *dt, uint year, uint month, uint day) {
-    time_t time;
+date_t date_from_cal(uint year, uint month, uint day) {
+    time_t t;
     struct tm tm;
     memset(&tm, 0, sizeof(struct tm));
 
     tm.tm_year = year - 1900;
     tm.tm_mon = month-1;
     tm.tm_mday = day;
-    time = mktime(&tm);
-    if (time == -1) {
-        fprintf(stderr, "date_assign(%d, %d, %d) mktime() error\n", year, month, day);
-        return 1;
+    t = mktime(&tm);
+    if (t == -1) {
+        fprintf(stderr, "date_from_cal(%d, %d, %d) mktime() error\n", year, month, day);
+        return 0;
     }
-
-    dt->time = time;
-    dt->tm = tm;
-    return 0;
+    return t;
 }
-int date_assign_iso(date_t *dt, char *isodate) {
-    time_t time;
+date_t date_from_iso(char *isodate) {
+    time_t t;
     struct tm tm;
     memset(&tm, 0, sizeof(struct tm));
 
     if (strptime(isodate, "%F", &tm) == NULL) {
-        fprintf(stderr, "date_assign_iso('%s') strptime() error\n", isodate);
-        return errno;
+        fprintf(stderr, "date_from_iso('%s') strptime() error\n", isodate);
+        return 0;
     }
-    time = mktime(&tm);
-    if (time == -1) {
+    t = mktime(&tm);
+    if (t == -1) {
         fprintf(stderr, "date_assign_iso('%s') mktime() error\n", isodate);
-        return errno;
+        return 0;
     }
+    return t;
+}
+void date_strftime(date_t dt, const char *fmt, char *buf, size_t buf_len) {
+    struct tm tm;
+    localtime_r(&dt, &tm);
+    strftime(buf, buf_len, fmt, &tm);
+}
+void date_to_iso(date_t dt, char *buf, size_t buf_len) {
+    struct tm tm;
+    localtime_r(&dt, &tm);
+    strftime(buf, buf_len, "%F", &tm);
+}
+void date_to_cal(date_t dt, int *retyear, int *retmonth, int *retday) {
+    struct tm tm;
+    localtime_r(&dt, &tm);
+    if (retyear)
+        *retyear = tm.tm_year + 1900;
+    if (retmonth)
+        *retmonth = tm.tm_mon+1;
+    if (retday)
+        *retday = tm.tm_mday;
+}
+date_t date_prev_month(date_t dt) {
+    int year, month, day;
+    date_to_cal(dt, &year, &month, &day);
 
-    dt->time = time;
-    dt->tm = tm;
-    return 0;
-}
-void date_to_iso(date_t *dt, char *buf, size_t buf_len) {
-    strftime(buf, buf_len, "%F", &dt->tm);
-}
-void date_strftime(date_t *dt, const char *fmt, char *buf, size_t buf_len) {
-    strftime(buf, buf_len, fmt, &dt->tm);
-}
-void date_dup(date_t *dest, date_t *src) {
-    dest->time = src->time;
-    dest->tm = src->tm;
-}
-time_t date_time(date_t *dt) {
-    return dt->time;
-}
-int date_year(date_t *dt) {
-    return dt->tm.tm_year + 1900;
-}
-int date_month(date_t *dt) {
-    return dt->tm.tm_mon+1;
-}
-int date_day(date_t *dt) {
-    return dt->tm.tm_mday;
-}
-void date_set_prev_month(date_t *dt) {
-    if (dt->tm.tm_year == 0)
-        return;
+    if (year == 0)
+        return dt;
 
-    dt->tm.tm_mon--;
-    if (dt->tm.tm_mon < 0) {
-        dt->tm.tm_mon = 11;
-        dt->tm.tm_year--;
+    month--;
+    if (month < 1) {
+        month = 12;
+        year--;
     }
+    return date_from_cal(year, month, day);
 }
-void date_set_next_month(date_t *dt) {
-    dt->tm.tm_mon++;
-    if (dt->tm.tm_mon > 11) {
-        dt->tm.tm_mon = 0;
-        dt->tm.tm_year++;
+date_t date_next_month(date_t dt) {
+    int year, month, day;
+    date_to_cal(dt, &year, &month, &day);
+
+    month++;
+    if (month > 12) {
+        month = 0;
+        year++;
     }
-}
-void date_set_year(date_t *dt, int year) {
-    date_assign_cal(dt, year, date_month(dt), date_day(dt));
-}
-void date_set_month(date_t *dt, int month) {
-    date_assign_cal(dt, date_year(dt), month, date_day(dt));
-}
-void date_set_day(date_t *dt, int day) {
-    date_assign_cal(dt, date_year(dt), date_month(dt), day);
+    return date_from_cal(year, month, day);
 }
 
 arena_t new_arena(uint64_t cap) {

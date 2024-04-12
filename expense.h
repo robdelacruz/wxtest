@@ -8,8 +8,7 @@
 typedef struct {
     str_t *expfile;
     sqlite3 *expfiledb;
-    date_t *dt;
-    date_t *dttmp;
+    date_t dt;
     array_t *xps;
     array_t *cats;
     exp_t *selxp;
