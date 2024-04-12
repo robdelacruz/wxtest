@@ -68,30 +68,6 @@ void date_to_cal(date_t dt, int *retyear, int *retmonth, int *retday);
 date_t date_prev_month(date_t dt);
 date_t date_next_month(date_t dt);
 
-#if 0
-date_t *date_new(time_t t);
-date_t *date_new_today();
-date_t *date_new_cal(uint year, uint month, uint day);
-date_t *date_new_iso(char *isodate);
-void date_free(date_t *dt);
-void date_assign_time(date_t *dt, time_t time);
-date_t *date_assign_today(date_t *dt);
-int date_assign_cal(date_t *dt, uint year, uint month, uint day);
-int date_assign_iso(date_t *dt, char *isodate);
-void date_to_iso(date_t *dt, char *buf, size_t buf_len);
-void date_strftime(date_t *dt, const char *fmt, char *buf, size_t buf_len);
-void date_dup(date_t *dest, date_t *src);
-time_t date_time(date_t *dt);
-int date_year(date_t *dt);
-int date_month(date_t *dt);
-int date_day(date_t *dt);
-void date_set_prev_month(date_t *dt);
-void date_set_next_month(date_t *dt);
-void date_set_year(date_t *dt, int year);
-void date_set_month(date_t *dt, int month);
-void date_set_day(date_t *dt, int day);
-#endif
-
 array_t *array_new(size_t cap);
 void array_free(array_t *a);
 void array_assign(array_t *a, void **items, size_t len, size_t cap);

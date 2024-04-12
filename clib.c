@@ -108,7 +108,7 @@ date_t date_next_month(date_t dt) {
 
     month++;
     if (month > 12) {
-        month = 0;
+        month = 1;
         year++;
     }
     return date_from_cal(year, month, day);
