@@ -1,6 +1,10 @@
 #ifndef EXPENSE_H
 #define EXPENSE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "sqlite3/sqlite3.h"
 #include "clib.h"
 #include "db.h"
@@ -38,5 +42,8 @@ exp_t *ctx_get_selected_expense(ExpenseContext *ctx);
 
 int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *sum);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
