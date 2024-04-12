@@ -182,16 +182,18 @@ void exp_dup(sqlite3 *db, exp_t *dest, exp_t *src) {
     dest->expid = src->expid;
     dest->date = src->date;
     str_assign(dest->desc, src->desc->s);
-    str_assign(dest->catname, src->catname->s);
     dest->amt = src->amt;
+    dest->catid = src->catid;
+    str_assign(dest->catname, src->catname->s);
 
-    if (dest->catid != src->catid) {
-        cat_t *cat = cat_new();
-        db_find_cat_by_id(db, src->catid, cat);
-        dest->catid = cat->catid;
-        str_assign(dest->catname, cat->name->s);
-        cat_free(cat);
-    }
+// $$ What's the purpose of this?
+//    if (dest->catid != src->catid) {
+//        cat_t *cat = cat_new();
+//        db_find_cat_by_id(db, src->catid, cat);
+//        dest->catid = cat->catid;
+//        str_assign(dest->catname, cat->name->s);
+//        cat_free(cat);
+//    }
 }
 
 int exp_is_valid(exp_t *xp) {
@@ -224,6 +226,33 @@ int db_find_cat_by_id(sqlite3 *db, uint64_t catid, cat_t *cat) {
     if (z == SQLITE_ROW) {
         cat->catid = sqlite3_column_int64(stmt, 0);
         str_assign(cat->name, (char*)sqlite3_column_text(stmt, 1));
+    }
+
+    sqlite3_finalize(stmt);
+    return 0;
+}
+int db_find_cat_by_name(sqlite3 *db, str_t *name, uint64_t *catid) {
+    sqlite3_stmt *stmt;
+    const char *s;
+    int z;
+
+    *catid = 0;
+
+    s = "SELECT cat_id, name FROM cat WHERE name=?";
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    sqlite3_bind_text(stmt, 1, name->s, -1, NULL);
+
+    z = sqlite3_step(stmt);
+    if (z < SQLITE_ROW) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    if (z == SQLITE_ROW) {
+        *catid = sqlite3_column_int64(stmt, 0);
     }
 
     sqlite3_finalize(stmt);
@@ -276,6 +305,8 @@ int db_add_cat(sqlite3 *db, cat_t *cat) {
         return z;
     }
     sqlite3_finalize(stmt);
+
+    cat->catid = sqlite3_last_insert_rowid(db);
     return 0;
 }
 int db_edit_cat(sqlite3 *db, cat_t *cat) {
@@ -423,6 +454,8 @@ int db_add_exp(sqlite3 *db, exp_t *xp) {
         return z;
     }
     sqlite3_finalize(stmt);
+
+    xp->expid = sqlite3_last_insert_rowid(db);
     return 0;
 }
 int db_edit_exp(sqlite3 *db, exp_t *xp) {

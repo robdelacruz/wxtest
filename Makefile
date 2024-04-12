@@ -1,5 +1,6 @@
 CC=gcc
 CXX=g++
+
 CSOURCES=db.c clib.c expense.c
 CPPSOURCES=App.cpp Frame.cpp EditExpenseDialog.cpp
 COBJECTS=$(patsubst %.c, %.o, $(CSOURCES))
@@ -38,8 +39,10 @@ sqlite3.o: sqlite3/sqlite3.c
 	$(CXX) -c $(CPPFLAGS) -o $@ $<
 
 t: $(OBJECTS)
-	#$(CXX) $(CPPFLAGS) -o $@ $^ $(LDFLAGS)
 	$(CXX) -o $@ $^ $(LDFLAGS)
+
+expconv: expconv.c clib.o db.o sqlite3.o
+	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
 	rm -rf t $(OBJECTS)
