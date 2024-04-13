@@ -47,6 +47,8 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(wxID_CLOSE, MyFrame::OnFileClose)
     EVT_MENU(wxID_EXIT, MyFrame::OnFileExit)
 
+    EVT_MENU(ID_EXPENSE_NEW, MyFrame::OnExpenseNew)
+
     EVT_SPINCTRL(ID_NAV_YEAR_SPIN, MyFrame::OnNavYear)
     EVT_LIST_ITEM_SELECTED(ID_NAV_MONTH_LIST, MyFrame::OnNavMonth)
 
@@ -367,6 +369,13 @@ void MyFrame::OnFileExit(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
     ctx_close(ctx);
     Close();
+}
+
+void MyFrame::OnExpenseNew(wxCommandEvent& event) {
+    EditExpenseDialog dlg(this);
+    dlg.ShowModal();
+
+    dlg.Destroy();
 }
 
 void MyFrame::OnPrevMonth(wxCommandEvent& event) {
