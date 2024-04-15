@@ -2,6 +2,7 @@
 #define EDITEXPENSEDIALOG_H
 
 #include "wx/wx.h"
+#include "wx/datectrl.h"
 #include "db.h"
 
 class EditExpenseDialog : public wxDialog {
@@ -10,6 +11,8 @@ public:
     double m_amt;
     int m_icatsel;
     wxDateTime m_date;
+    exp_t *m_xp;
+    wxDatePickerCtrl *m_dpDate;
 
     EditExpenseDialog(wxWindow *parent, exp_t *xp);
 

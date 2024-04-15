@@ -18,29 +18,6 @@
 #include "EditExpenseDialog.h"
 #include "db.h"
 
-enum {
-    ID_EXPENSE_NEW = wxID_HIGHEST,
-    ID_EXPENSE_EDIT,
-    ID_EXPENSE_DEL,
-
-    ID_NO_OPEN_FILE,
-    ID_MAIN_SPLIT,
-
-    ID_NAV_YEAR_SPIN,
-    ID_NAV_MONTH_LIST,
-
-    ID_EXPENSES_PANEL,
-    ID_EXPENSES_HEADING,
-    ID_EXPENSES_LIST,
-    ID_EXPENSE_GRID,
-
-    ID_EXPENSES_PREV,
-    ID_EXPENSES_NEXT,
-    ID_EXPENSES_FILTERTEXT,
-
-    ID_COUNT
-};
-
 wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(wxID_NEW, MyFrame::OnFileNew)
     EVT_MENU(wxID_OPEN, MyFrame::OnFileOpen)
@@ -380,7 +357,14 @@ void MyFrame::OnExpenseNew(wxCommandEvent& event) {
 
 }
 void MyFrame::OnExpenseEdit(wxCommandEvent& event) {
-    exp_t *xp = exp_new();
+    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
+    long lsel = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    if (lsel == -1)
+        return;
+
+    exp_t *xp = (exp_t *) lv->GetItemData(lsel);
+    assert(xp != NULL);
+
     EditExpenseDialog dlg(this, xp);
     if (dlg.ShowModal() == wxID_OK) {
     }
@@ -407,6 +391,15 @@ void MyFrame::OnListItemSelected(wxListEvent& event) {
 
     ctx_select_expense(ctx, xp);
     RefreshExpenseGrid();
+}
+void MyFrame::OnListItemActivated(wxListEvent& event) {
+    wxListItem li = event.GetItem();
+    exp_t *xp = (exp_t *)li.GetData();
+    assert(xp != NULL);
+
+    EditExpenseDialog dlg(this, xp);
+    if (dlg.ShowModal() == wxID_OK) {
+    }
 }
 
 void MyFrame::ClearExpenseList() {
@@ -463,9 +456,6 @@ void MyFrame::RefreshExpenseGrid() {
     pg->GetProperty("Category")->SetValue(wxVariant((int)xp->catid));
     pg->GetProperty("Date")->SetValue(wxVariant(wxDateTime(xp->date)));
     pg->Show(true);
-}
-
-void MyFrame::OnListItemActivated(wxListEvent& event) {
 }
 
 void MyFrame::OnPropertyGridChanged(wxPropertyGridEvent& event) {
