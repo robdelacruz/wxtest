@@ -350,13 +350,19 @@ void MyFrame::OnFileExit(wxCommandEvent& event) {
 }
 
 void MyFrame::OnExpenseNew(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
     exp_t *xp = exp_new();
+
     EditExpenseDialog dlg(this, xp);
     if (dlg.ShowModal() == wxID_OK) {
-    }
+        db_add_exp(ctx->expfiledb, xp);
 
+        RefreshNav();
+        RefreshExpenses();
+    }
 }
 void MyFrame::OnExpenseEdit(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
     wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
     long lsel = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
     if (lsel == -1)
@@ -367,8 +373,11 @@ void MyFrame::OnExpenseEdit(wxCommandEvent& event) {
 
     EditExpenseDialog dlg(this, xp);
     if (dlg.ShowModal() == wxID_OK) {
-    }
+        db_edit_exp(ctx->expfiledb, xp);
 
+        RefreshNav();
+        RefreshExpenses();
+    }
 }
 
 void MyFrame::OnPrevMonth(wxCommandEvent& event) {

@@ -97,16 +97,40 @@ void EditExpenseDialog::CreateControls() {
 
 bool EditExpenseDialog::TransferDataFromWindow() {
     wxDatePickerCtrl *datectrl = (wxDatePickerCtrl *) wxWindow::FindWindowById(ID_EDITEXPENSE_DATE);
+    uint64_t catid;
 
     wxDialog::TransferDataFromWindow();
 
-//    wxLogDebug("TransferDataFromWindow() m_desc: '%s', m_amt: %f, m_icatsel: %d\n", m_desc, m_amt, m_icatsel);
+    if (m_icatsel == -1)
+        return false;
+    if (m_desc.Length() == 0)
+        return false;
+
+    catid = GetCatIdFromSelectedIndex(m_icatsel);
+    if (catid == 0)
+        return false;
 
     str_assign(m_xp->desc, m_desc.mb_str(wxConvUTF8));
     m_xp->amt = m_amt;
-    m_xp->catid = m_icatsel;
+    m_xp->catid = catid;
     m_xp->date = datectrl->GetValue().GetTicks();
+
+    wxLogDebug("catid: %ld\n", m_xp->catid);
 
     return true;
 }
+
+uint64_t EditExpenseDialog::GetCatIdFromSelectedIndex(int icatsel) {
+    ExpenseContext *ctx = getContext();
+    cat_t *cat;
+
+    if (icatsel < 0)
+        return 0;
+    if (icatsel > (int) ctx->cats->len-1)
+        return 0;
+
+    cat = (cat_t *) ctx->cats->items[icatsel];
+    return cat->catid;
+}
+
 

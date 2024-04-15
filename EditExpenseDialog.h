@@ -19,6 +19,7 @@ public:
 private:
     void CreateControls();
     bool TransferDataFromWindow();
+    uint64_t GetCatIdFromSelectedIndex(int icatsel);
 
     wxDECLARE_EVENT_TABLE();
 };
