@@ -2,12 +2,21 @@
 #define EDITEXPENSEDIALOG_H
 
 #include "wx/wx.h"
+#include "db.h"
 
 class EditExpenseDialog : public wxDialog {
 public:
-    EditExpenseDialog(wxWindow *parent);
+    wxString m_desc;
+    double m_amt;
+    int m_icatsel;
+    wxDateTime m_date;
+
+    EditExpenseDialog(wxWindow *parent, exp_t *xp);
 
 private:
+    void CreateControls();
+    bool TransferDataFromWindow();
+
     wxDECLARE_EVENT_TABLE();
 };
 

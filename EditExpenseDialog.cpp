@@ -1,38 +1,77 @@
 #include <stdio.h>
+#include <assert.h>
 
 #include "wx/wx.h"
+#include "wx/valgen.h"
+#include "wx/valnum.h"
 #include "wx/datectrl.h"
+
 #include "EditExpenseDialog.h"
 #include "App.h"
 
 wxBEGIN_EVENT_TABLE(EditExpenseDialog, wxDialog)
 wxEND_EVENT_TABLE()
 
-EditExpenseDialog::EditExpenseDialog(wxWindow *parent)
+enum {
+    ID_EDITEXPENSE_DESCRIPTION = wxID_HIGHEST,
+    ID_EDITEXPENSE_AMOUNT,
+    ID_EDITEXPENSE_CATEGORY,
+    ID_EDITEXPENSE_DATE,
+
+    ID_EDITEXPENSE_COUNT
+};
+
+EditExpenseDialog::EditExpenseDialog(wxWindow *parent, exp_t *xp)
                  : wxDialog(parent, wxID_ANY, wxString("New Expense")) {
+    m_desc = wxString::FromUTF8(xp->desc->s);
+    m_amt = xp->amt;
+    m_icatsel = xp->catid-1;
+//    m_date = wxDateTime(xp->date);
+    m_date = wxDateTime(1, wxDateTime::Dec, 1973, 1, 1, 1, 1);
+
+    CreateControls();
+}
+
+void EditExpenseDialog::CreateControls() {
+    ExpenseContext *ctx = getContext();
     wxBoxSizer *top;
     wxBoxSizer *vbox;
     wxBoxSizer *hbox;
     wxStaticBoxSizer *staticbox;
     wxFlexGridSizer *gs;
     wxStaticText *stDesc, *stAmt, *stCat, *stDate;
-    wxTextCtrl *tcDesc, *tcAmt, *tcCat;
+    wxTextCtrl *tcDesc, *tcAmt;
+    wxChoice *choiceCat;
     wxDatePickerCtrl *dpDate;
     wxButton *btnOK, *btnCancel;
     wxStaticBox *sb;
+    wxTextValidator vldDesc(wxFILTER_NONE, &m_desc);
+    wxFloatingPointValidator<double> vldAmt(2, &m_amt, wxNUM_VAL_ZERO_AS_BLANK | wxNUM_VAL_THOUSANDS_SEPARATOR);
+    wxGenericValidator vldCat(&m_icatsel);
+    wxArrayString choices;
+
+    DestroyChildren();
+    SetSizer(NULL);
+
+    for (size_t i=0; i < ctx->cats->len; i++) {
+        cat_t *cat = (cat_t *) ctx->cats->items[i];
+        choices.Add(wxString::FromUTF8(cat->name->s));
+    }
 
     staticbox = new wxStaticBoxSizer(wxVERTICAL, this, "Expense Details");
-    //staticbox = new wxStaticBoxSizer(wxVERTICAL, this, "");
     sb = staticbox->GetStaticBox();
+
     stDesc = new wxStaticText(sb, wxID_ANY, "Description");
     stAmt = new wxStaticText(sb, wxID_ANY, "Amount");
     stCat = new wxStaticText(sb, wxID_ANY, "Category");
     stDate = new wxStaticText(sb, wxID_ANY, "Date");
-    tcDesc = new wxTextCtrl(sb, wxID_ANY, "", wxDefaultPosition, wxSize(200,-1));
+
+    tcDesc = new wxTextCtrl(sb, ID_EDITEXPENSE_DESCRIPTION, "", wxDefaultPosition, wxSize(200,-1), 0, vldDesc);
     tcDesc->SetMaxLength(30);
-    tcAmt = new wxTextCtrl(sb, wxID_ANY, "");
-    tcCat = new wxTextCtrl(sb, wxID_ANY, "");
-    dpDate = new wxDatePickerCtrl(sb, wxID_ANY);
+    tcAmt = new wxTextCtrl(sb, ID_EDITEXPENSE_AMOUNT, "", wxDefaultPosition, wxDefaultSize, 0, vldAmt);
+    choiceCat = new wxChoice(sb, ID_EDITEXPENSE_CATEGORY, wxDefaultPosition, wxDefaultSize, choices, 0, vldCat);
+    //dpDate = new wxDatePickerCtrl(sb, ID_EDITEXPENSE_DATE, m_date, wxDefaultPosition, wxDefaultSize, wxDP_DEFAULT|wxDP_SHOWCENTURY);
+    dpDate = new wxDatePickerCtrl(sb, ID_EDITEXPENSE_DATE, m_date, wxDefaultPosition, wxDefaultSize, wxDP_DEFAULT|wxDP_SHOWCENTURY, wxGenericValidator(&m_date));
 
     gs = new wxFlexGridSizer(4, 2, 5, 5);
     gs->Add(stDesc, 0, wxALIGN_CENTER_VERTICAL, 0);
@@ -40,10 +79,9 @@ EditExpenseDialog::EditExpenseDialog(wxWindow *parent)
     gs->Add(stAmt, 0, wxALIGN_CENTER_VERTICAL, 0);
     gs->Add(tcAmt, 1, wxALIGN_CENTER_VERTICAL, 0);
     gs->Add(stCat, 0, wxALIGN_CENTER_VERTICAL, 0);
-    gs->Add(tcCat, 1, wxALIGN_CENTER_VERTICAL, 0);
+    gs->Add(choiceCat, 1, wxALIGN_CENTER_VERTICAL, 0);
     gs->Add(stDate, 0, wxALIGN_CENTER_VERTICAL, 0);
     gs->Add(dpDate, 1, wxALIGN_CENTER_VERTICAL, 0);
-    //staticbox->Add(gs, 1, wxEXPAND|wxALL, 10);
     staticbox->AddSpacer(5);
     staticbox->Add(gs, 1, wxEXPAND|wxLEFT|wxRIGHT, 10);
     staticbox->AddSpacer(10);
@@ -65,5 +103,22 @@ EditExpenseDialog::EditExpenseDialog(wxWindow *parent)
 
     SetSizer(top);
     top->Fit(this);
+}
+
+bool EditExpenseDialog::TransferDataFromWindow() {
+    wxDialog::TransferDataFromWindow();
+
+//    wxChoice *choicectrl = (wxChoice *) wxWindow::FindWindowById(ID_EDITEXPENSE_CATEGORY);
+//    wxDatePickerCtrl *datectrl = (wxDatePickerCtrl *) wxWindow::FindWindowById(ID_EDITEXPENSE_DATE);
+//    assert(datectrl != NULL);
+
+//    m_icatsel = choicectrl->GetSelection();
+
+    wxLogDebug("TransferDataFromWindow() m_desc: '%s', m_amt: %f, m_icatsel: %d\n", m_desc, m_amt, m_icatsel);
+
+//    m_date = datectrl->GetValue();
+    wxLogDebug("m_date: %s\n", m_date.Format("%F"));
+
+    return true;
 }
 

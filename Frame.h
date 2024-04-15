@@ -16,6 +16,7 @@ public:
     void OnFileExit(wxCommandEvent& event);
 
     void OnExpenseNew(wxCommandEvent& event);
+    void OnExpenseEdit(wxCommandEvent& event);
 
     void OnNavYear(wxSpinEvent& event);
     void OnNavMonth(wxListEvent& event);
