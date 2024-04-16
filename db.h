@@ -51,6 +51,7 @@ int db_edit_cat(sqlite3 *db, cat_t *cat);
 int db_del_cat(sqlite3 *db, uint catid);
 
 int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps);
+int db_find_exp_by_id(sqlite3 *db, uint expid, exp_t *xp);
 int db_sum_amount_exp(sqlite3 *db, date_t min_date, date_t max_date, double *sum);
 
 int db_add_exp(sqlite3 *db, exp_t *xp);

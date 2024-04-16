@@ -83,7 +83,7 @@ int ctx_create_expense_file(ExpenseContext *ctx, const char *filename) {
     str_assign(ctx->expfile, filename);
 
     ctx_refresh_categories(ctx);
-    ctx_refresh_expenses(ctx);
+    ctx_refresh_expenses(ctx, 0, 0);
 
     return 0;
 }
@@ -101,7 +101,7 @@ int ctx_open_expense_file(ExpenseContext *ctx, const char *filename) {
     str_assign(ctx->expfile, filename);
 
     ctx_refresh_categories(ctx);
-    ctx_refresh_expenses(ctx);
+    ctx_refresh_expenses(ctx, 0, 0);
 
     return 0;
 }
@@ -143,29 +143,6 @@ int ctx_is_open_expfile(ExpenseContext *ctx) {
         return 1;
     return 0;
 }
-int ctx_refresh_expenses_prev_month(ExpenseContext *ctx) {
-    ctx->dt = date_prev_month(ctx->dt);
-    return ctx_refresh_expenses(ctx);
-}
-int ctx_refresh_expenses_next_month(ExpenseContext *ctx) {
-    ctx->dt = date_next_month(ctx->dt);
-    return ctx_refresh_expenses(ctx);
-}
-int ctx_refresh_expenses_year(ExpenseContext *ctx, int year) {
-    if (year < 1900)
-        year = 1900;
-    ctx->dt = date_from_cal(year, 1, 1);
-    return ctx_refresh_expenses(ctx);
-}
-int ctx_refresh_expenses_month(ExpenseContext *ctx, int month) {
-    int dtyear;
-
-    if (month < 1 || month > 12)
-        return 0;
-    date_to_cal(ctx->dt, &dtyear, NULL, NULL);
-    ctx->dt = date_from_cal(dtyear, month, 1);
-    return ctx_refresh_expenses(ctx);
-}
 
 int ctx_refresh_categories(ExpenseContext *ctx) {
     return db_select_cat(ctx->expfiledb, ctx->cats);
@@ -175,14 +152,23 @@ int ctx_refresh_categories(ExpenseContext *ctx) {
 // To leave the year/month unchanged, pass -1 or a value outside the valid range.
 //
 // Ex.
-//   ctx_refresh_expenses(ctx, -1, 3)    // set month to March, year is unchanged
-//   ctx_refresh_expenses(ctx, 2023, -1) // set year to 2023, month is unchanged
+//   ctx_refresh_expenses(ctx, 0, 3)    // set month to March, year is unchanged
+//   ctx_refresh_expenses(ctx, 2023, 0) // set year to 2023, month is unchanged
 //   ctx_refresh_expenses(ctx, 2023, 3)  // set year/month to 2023 March
 //   ctx_refresh_expenses(ctx, 1899, 0)  // outside the valid ranges, year/month unchanged
 //
-int ctx_refresh_expenses(ExpenseContext *ctx) {
+int ctx_refresh_expenses(ExpenseContext *ctx, int year, int month) {
+    int oldyear, oldmonth;
+
     if (!ctx_is_open_expfile(ctx))
         return 1;
+
+    date_to_cal(ctx->dt, &oldyear, &oldmonth, NULL);
+    if (year < 1900)
+        year = oldyear;
+    if (month < 1 || month > 12)
+        month = oldmonth;
+    ctx->dt = date_from_cal(year, month, 1);
 
     // Generate date range for min_date <= date < max_date
     // Given year=2024, month=3
@@ -191,6 +177,18 @@ int ctx_refresh_expenses(ExpenseContext *ctx) {
 
     ctx->selxp = NULL;
     return db_select_exp(ctx->expfiledb, ctx->dt, date_next_month(ctx->dt), ctx->xps);
+}
+int ctx_refresh_expenses_prev_month(ExpenseContext *ctx) {
+    int year, month;
+
+    date_to_cal(date_prev_month(ctx->dt), &year, &month, NULL);
+    return ctx_refresh_expenses(ctx, year, month);
+}
+int ctx_refresh_expenses_next_month(ExpenseContext *ctx) {
+    int year, month;
+
+    date_to_cal(date_next_month(ctx->dt), &year, &month, NULL);
+    return ctx_refresh_expenses(ctx, year, month);
 }
 
 int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *sum) {

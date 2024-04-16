@@ -14,11 +14,21 @@ wxEND_EVENT_TABLE()
 
 EditExpenseDialog::EditExpenseDialog(wxWindow *parent, exp_t *xp)
                  : wxDialog(parent, wxID_ANY, wxString("New Expense")) {
+    ExpenseContext *ctx = getContext();
+
     m_desc = wxString::FromUTF8(xp->desc->s);
     m_amt = xp->amt;
-    m_icatsel = xp->catid-1;
     m_date = wxDateTime(xp->date);
     m_xp = xp;
+
+    m_icatsel = -1;
+    for (size_t i=0; i < ctx->cats->len; i++) {
+        cat_t *cat = (cat_t *) ctx->cats->items[i];
+        if (cat->catid == xp->catid) {
+            m_icatsel = i;
+            break;
+        }
+    }
 
     CreateControls();
 }
@@ -114,8 +124,6 @@ bool EditExpenseDialog::TransferDataFromWindow() {
     m_xp->amt = m_amt;
     m_xp->catid = catid;
     m_xp->date = datectrl->GetValue().GetTicks();
-
-    wxLogDebug("catid: %ld\n", m_xp->catid);
 
     return true;
 }

@@ -28,19 +28,17 @@ int ctx_create_expense_file(ExpenseContext *ctx, const char *filename);
 int ctx_open_expense_file(ExpenseContext *ctx, const char *filename);
 int ctx_init_from_args(ExpenseContext *ctx, int argc, char **argv);
 int ctx_is_open_expfile(ExpenseContext *ctx);
+void ctx_set_date(int year, int month);
 
 int ctx_refresh_categories(ExpenseContext *ctx);
-
-int ctx_refresh_expenses(ExpenseContext *ctx);
+int ctx_refresh_expenses(ExpenseContext *ctx, int year, int month);
 int ctx_refresh_expenses_prev_month(ExpenseContext *ctx);
 int ctx_refresh_expenses_next_month(ExpenseContext *ctx);
-int ctx_refresh_expenses_year(ExpenseContext *ctx, int year);
-int ctx_refresh_expenses_month(ExpenseContext *ctx, int month);
+int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *sum);
 
 void ctx_select_expense(ExpenseContext *ctx, exp_t *selxp);
 exp_t *ctx_get_selected_expense(ExpenseContext *ctx);
 
-int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *sum);
 
 #ifdef __cplusplus
 }

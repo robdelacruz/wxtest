@@ -10,6 +10,23 @@
 class MyFrame : public wxFrame {
 public:
     MyFrame(const wxString& title);
+    void CreateMenuBar();
+    void CreateControls();
+    wxWindow *CreateExpensesNav(wxWindow *parent);
+    wxWindow *CreateExpensesView(wxWindow *parent);
+    wxWindow *CreateExpensesList(wxWindow *parent);
+    wxWindow *CreateExpensePropGrid(wxWindow *parent);
+    void ShowControls();
+
+    void RefreshNav();
+    void RefreshExpenses();
+    void ClearExpenseList();
+    void RefreshExpenseList();
+    void ClearExpenseGrid();
+    void RefreshExpenseGrid();
+
+    void EditExpense(exp_t *xp);
+
     void OnFileNew(wxCommandEvent& event);
     void OnFileOpen(wxCommandEvent& event);
     void OnFileClose(wxCommandEvent& event);
@@ -18,29 +35,19 @@ public:
     void OnExpenseNew(wxCommandEvent& event);
     void OnExpenseEdit(wxCommandEvent& event);
 
-    void OnNavYear(wxSpinEvent& event);
-    void OnNavMonth(wxListEvent& event);
     void OnPrevMonth(wxCommandEvent& event);
     void OnNextMonth(wxCommandEvent& event);
     void OnListItemSelected(wxListEvent& event);
     void OnListItemActivated(wxListEvent& event);
     void OnPropertyGridChanged(wxPropertyGridEvent& event);
 
-    void CreateMenuBar();
-    void CreateControls();
-    void ShowControls();
-    void RefreshNav();
-    void RefreshExpenses();
+    void OnNavYear(wxSpinEvent& event);
+    void OnNavMonth(wxListEvent& event);
 
-    wxWindow *CreateExpensesNav(wxWindow *parent);
-    wxWindow *CreateExpensesView(wxWindow *parent);
-    wxWindow *CreateExpensesList(wxWindow *parent);
-    wxWindow *CreateExpensePropGrid(wxWindow *parent);
 
-    void ClearExpenseList();
-    void RefreshExpenseList();
-    void ClearExpenseGrid();
-    void RefreshExpenseGrid();
+
+
+
 
 private:
     wxDECLARE_EVENT_TABLE();

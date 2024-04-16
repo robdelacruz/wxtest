@@ -103,7 +103,6 @@ void MyFrame::CreateControls() {
     this->SetSizer(vbox);
 
 }
-
 wxWindow* MyFrame::CreateExpensesNav(wxWindow *parent) {
     wxPanel *pnl;
     wxSpinCtrl *spinYear;
@@ -137,7 +136,6 @@ wxWindow* MyFrame::CreateExpensesNav(wxWindow *parent) {
 
     return pnl;
 }
-
 wxWindow* MyFrame::CreateExpensesView(wxWindow *parent) {
     wxSplitterWindow *split;
     wxWindow *explist;
@@ -151,7 +149,6 @@ wxWindow* MyFrame::CreateExpensesView(wxWindow *parent) {
 
     return split;
 }
-
 wxWindow* MyFrame::CreateExpensesList(wxWindow *parent) {
     wxPanel *pnl;
     wxListView *lv;
@@ -199,7 +196,6 @@ wxWindow* MyFrame::CreateExpensesList(wxWindow *parent) {
 
     return pnl;
 }
-
 wxWindow* MyFrame::CreateExpensePropGrid(wxWindow *parent) {
     wxPropertyGrid *pg;
     wxArrayString cats;
@@ -222,7 +218,6 @@ wxWindow* MyFrame::CreateExpensePropGrid(wxWindow *parent) {
 
     return pg;
 }
-
 void MyFrame::ShowControls() {
     ExpenseContext *ctx = getContext();
     wxWindow *stNoOpenFile, *splitMain;
@@ -265,7 +260,6 @@ void MyFrame::RefreshNav() {
         lvMonths->SetItem(i, 1, buf);
     }
 }
-
 void MyFrame::RefreshExpenses() {
     ExpenseContext *ctx = getContext();
     wxStaticText *st;
@@ -279,6 +273,80 @@ void MyFrame::RefreshExpenses() {
     RefreshExpenseGrid();
 
     wxWindow::FindWindowById(ID_EXPENSES_PANEL)->Layout();
+}
+void MyFrame::ClearExpenseList() {
+    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
+    lv->DeleteAllItems();
+}
+void MyFrame::RefreshExpenseList() {
+    ExpenseContext *ctx = getContext();
+    wxListView *lv;
+    exp_t *xp;
+    char buf[24];
+
+    lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
+    lv->DeleteAllItems();
+
+    for (size_t i=0; i < ctx->xps->len; i++) {
+        xp = (exp_t *) ctx->xps->items[i];
+
+        date_strftime(xp->date, "%m-%d", buf, sizeof(buf));
+        lv->InsertItem(i, buf);
+        lv->SetItem(i, 1, xp->desc->s);
+        snprintf(buf, sizeof(buf), "%9.2f", xp->amt);
+        lv->SetItem(i, 2, buf);
+        lv->SetItem(i, 3, xp->catname->s);
+
+        lv->SetItemPtrData(i, (wxUIntPtr)xp);
+    }
+    // Select first row
+    if (ctx->xps->len > 0)
+        lv->SetItemState(0, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+}
+
+void MyFrame::ClearExpenseGrid() {
+    wxPropertyGrid *pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
+
+    pg->GetProperty("Description")->SetValue(wxVariant(wxString("")));
+    pg->GetProperty("Amount")->SetValue(wxVariant(0.0));
+    pg->GetProperty("Category")->SetValue(wxVariant(0));
+    //pg->GetProperty("Date")->SetValue(wxVariant(wxDateTime::Now()));
+    pg->GetProperty("Date")->SetValue(wxVariant(wxDateTime()));
+}
+void MyFrame::RefreshExpenseGrid() {
+    ExpenseContext *ctx = getContext();
+    wxPropertyGrid *pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
+    exp_t *xp = ctx_get_selected_expense(ctx);
+
+    if (xp == NULL) {
+        ClearExpenseGrid();
+        pg->Show(false);
+        return;
+    }
+    pg->GetProperty("Description")->SetValue(wxVariant(wxString(xp->desc->s)));
+    pg->GetProperty("Amount")->SetValue(wxVariant(xp->amt));
+    pg->GetProperty("Category")->SetValue(wxVariant((int)xp->catid));
+    pg->GetProperty("Date")->SetValue(wxVariant(wxDateTime(xp->date)));
+    pg->Show(true);
+}
+
+void MyFrame::EditExpense(exp_t *xp) {
+    ExpenseContext *ctx = getContext();
+    int xpyear, xpmonth;
+
+    EditExpenseDialog dlg(this, xp);
+    if (dlg.ShowModal() == wxID_OK) {
+        if (xp->expid == 0)
+            db_add_exp(ctx->expfiledb, xp);
+        else
+            db_edit_exp(ctx->expfiledb, xp);
+
+        date_to_cal(xp->date, &xpyear, &xpmonth, NULL);
+        ctx_refresh_expenses(ctx, xpyear, xpmonth);
+
+        RefreshNav();
+        RefreshExpenses();
+    }
 }
 
 static wxString fileErrorString(wxString file, int errnum) {
@@ -350,19 +418,10 @@ void MyFrame::OnFileExit(wxCommandEvent& event) {
 }
 
 void MyFrame::OnExpenseNew(wxCommandEvent& event) {
-    ExpenseContext *ctx = getContext();
     exp_t *xp = exp_new();
-
-    EditExpenseDialog dlg(this, xp);
-    if (dlg.ShowModal() == wxID_OK) {
-        db_add_exp(ctx->expfiledb, xp);
-
-        RefreshNav();
-        RefreshExpenses();
-    }
+    EditExpense(xp);
 }
 void MyFrame::OnExpenseEdit(wxCommandEvent& event) {
-    ExpenseContext *ctx = getContext();
     wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
     long lsel = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
     if (lsel == -1)
@@ -370,14 +429,7 @@ void MyFrame::OnExpenseEdit(wxCommandEvent& event) {
 
     exp_t *xp = (exp_t *) lv->GetItemData(lsel);
     assert(xp != NULL);
-
-    EditExpenseDialog dlg(this, xp);
-    if (dlg.ShowModal() == wxID_OK) {
-        db_edit_exp(ctx->expfiledb, xp);
-
-        RefreshNav();
-        RefreshExpenses();
-    }
+    EditExpense(xp);
 }
 
 void MyFrame::OnPrevMonth(wxCommandEvent& event) {
@@ -405,68 +457,8 @@ void MyFrame::OnListItemActivated(wxListEvent& event) {
     wxListItem li = event.GetItem();
     exp_t *xp = (exp_t *)li.GetData();
     assert(xp != NULL);
-
-    EditExpenseDialog dlg(this, xp);
-    if (dlg.ShowModal() == wxID_OK) {
-    }
+    EditExpense(xp);
 }
-
-void MyFrame::ClearExpenseList() {
-    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
-    lv->DeleteAllItems();
-}
-void MyFrame::RefreshExpenseList() {
-    ExpenseContext *ctx = getContext();
-    wxListView *lv;
-    exp_t *xp;
-    char buf[24];
-
-    lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
-    lv->DeleteAllItems();
-
-    for (size_t i=0; i < ctx->xps->len; i++) {
-        xp = (exp_t *) ctx->xps->items[i];
-
-        date_strftime(xp->date, "%m-%d", buf, sizeof(buf));
-        lv->InsertItem(i, buf);
-        lv->SetItem(i, 1, xp->desc->s);
-        snprintf(buf, sizeof(buf), "%9.2f", xp->amt);
-        lv->SetItem(i, 2, buf);
-        lv->SetItem(i, 3, xp->catname->s);
-
-        lv->SetItemPtrData(i, (wxUIntPtr)xp);
-    }
-    // Select first row
-    if (ctx->xps->len > 0)
-        lv->SetItemState(0, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
-}
-
-void MyFrame::ClearExpenseGrid() {
-    wxPropertyGrid *pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
-
-    pg->GetProperty("Description")->SetValue(wxVariant(wxString("")));
-    pg->GetProperty("Amount")->SetValue(wxVariant(0.0));
-    pg->GetProperty("Category")->SetValue(wxVariant(0));
-    //pg->GetProperty("Date")->SetValue(wxVariant(wxDateTime::Now()));
-    pg->GetProperty("Date")->SetValue(wxVariant(wxDateTime()));
-}
-void MyFrame::RefreshExpenseGrid() {
-    ExpenseContext *ctx = getContext();
-    wxPropertyGrid *pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
-    exp_t *xp = ctx_get_selected_expense(ctx);
-
-    if (xp == NULL) {
-        ClearExpenseGrid();
-        pg->Show(false);
-        return;
-    }
-    pg->GetProperty("Description")->SetValue(wxVariant(wxString(xp->desc->s)));
-    pg->GetProperty("Amount")->SetValue(wxVariant(xp->amt));
-    pg->GetProperty("Category")->SetValue(wxVariant((int)xp->catid));
-    pg->GetProperty("Date")->SetValue(wxVariant(wxDateTime(xp->date)));
-    pg->Show(true);
-}
-
 void MyFrame::OnPropertyGridChanged(wxPropertyGridEvent& event) {
     wxPropertyGrid *pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
     wxPGProperty *prop = event.GetProperty();
@@ -483,16 +475,15 @@ void MyFrame::OnNavYear(wxSpinEvent& event) {
     ExpenseContext *ctx = getContext();
     int year = event.GetPosition();
 
-    ctx_refresh_expenses_year(ctx, year);
+    ctx_refresh_expenses(ctx, year, 0);
     RefreshNav();
     RefreshExpenses();
 }
-
 void MyFrame::OnNavMonth(wxListEvent& event) {
     ExpenseContext *ctx = getContext();
     int month = event.GetIndex()+1;
 
-    ctx_refresh_expenses_month(ctx, month);
+    ctx_refresh_expenses(ctx, 0, month);
     RefreshExpenses();
 }
 

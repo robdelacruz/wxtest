@@ -365,7 +365,8 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps) {
     s = "SELECT exp_id, date, desc, amt, exp.cat_id, IFNULL(cat.name, '') "
         "FROM exp "
         "LEFT OUTER JOIN cat ON exp.cat_id = cat.cat_id "
-        "WHERE date >= ? AND date < ?";
+        "WHERE date >= ? AND date < ? "
+        "ORDER BY date ";
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
@@ -392,6 +393,40 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps) {
         db_handle_err(db, stmt, s);
         return z;
     }
+    sqlite3_finalize(stmt);
+    return 0;
+}
+int db_find_exp_by_id(sqlite3 *db, uint expid, exp_t *xp) {
+    sqlite3_stmt *stmt;
+    const char *s;
+    int z;
+
+    s = "SELECT exp_id, date, desc, amt, exp.cat_id, IFNULL(cat.name, '') "
+        "FROM exp "
+        "LEFT OUTER JOIN cat ON exp.cat_id = cat.cat_id "
+        "WHERE exp_id = ?";
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    z = sqlite3_bind_int(stmt, 1, expid);
+    assert(z == 0);
+
+    z = sqlite3_step(stmt);
+    if (z < SQLITE_ROW) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    if (z == SQLITE_ROW) {
+        xp->expid = sqlite3_column_int64(stmt, 0);
+        xp->date = sqlite3_column_int(stmt, 1);
+        str_assign(xp->desc, (char*)sqlite3_column_text(stmt, 2));
+        xp->amt = sqlite3_column_double(stmt, 3);
+        xp->catid = sqlite3_column_int64(stmt, 4);
+        str_assign(xp->catname, (char*)sqlite3_column_text(stmt, 5));
+    }
+
     sqlite3_finalize(stmt);
     return 0;
 }
