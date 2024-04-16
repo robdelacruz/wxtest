@@ -283,6 +283,7 @@ void MyFrame::RefreshExpenseList() {
     wxListView *lv;
     exp_t *xp;
     char buf[24];
+    bool fItemSelected = false;
 
     lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
     lv->DeleteAllItems();
@@ -298,9 +299,16 @@ void MyFrame::RefreshExpenseList() {
         lv->SetItem(i, 3, xp->catname->s);
 
         lv->SetItemPtrData(i, (wxUIntPtr)xp);
+
+        // Restore selection of expense if found.
+        if (ctx->selxp && xp->expid == ctx->selxp->expid) {
+            lv->SetItemState(i, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+            fItemSelected = true;
+        }
     }
-    // Select first row
-    if (ctx->xps->len > 0)
+
+    // If no previous selected expense, select first row.
+    if (!fItemSelected && ctx->xps->len > 0)
         lv->SetItemState(0, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
 }
 
@@ -343,6 +351,7 @@ void MyFrame::EditExpense(exp_t *xp) {
 
         date_to_cal(xp->date, &xpyear, &xpmonth, NULL);
         ctx_refresh_expenses(ctx, xpyear, xpmonth);
+        ctx_select_expense(ctx, xp);
 
         RefreshNav();
         RefreshExpenses();
@@ -449,26 +458,60 @@ void MyFrame::OnListItemSelected(wxListEvent& event) {
     wxListItem li = event.GetItem();
     exp_t *xp = (exp_t *)li.GetData();
     assert(xp != NULL);
-
     ctx_select_expense(ctx, xp);
+
     RefreshExpenseGrid();
 }
 void MyFrame::OnListItemActivated(wxListEvent& event) {
     wxListItem li = event.GetItem();
     exp_t *xp = (exp_t *)li.GetData();
     assert(xp != NULL);
+
     EditExpense(xp);
 }
+
+//    wxPGProperty *prop = event.GetProperty();
+//    const wxString& name = prop->GetName();
+//    wxVariant v = prop->GetValue();
+//    pg->SetPropertyValue(prop, "changed!");
+
 void MyFrame::OnPropertyGridChanged(wxPropertyGridEvent& event) {
-    wxPropertyGrid *pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
-    wxPGProperty *prop = event.GetProperty();
-    const wxString& name = prop->GetName();
-    const wxString& label = prop->GetLabel();
+    ExpenseContext *ctx = getContext();
+    wxPropertyGrid *pg;
+    wxPGProperty *propDesc, *propAmount, *propCat, *propDate;
+    wxString desc;
+    double amt;
+    uint64_t catid;
+    wxDateTime date;
+    exp_t *xp;
+    int xpyear, xpmonth;
 
-    wxLogDebug("OnPropertyGridChanged() name: '%s' label: '%s'\n", name, label);
+    if (ctx->selxp == NULL)
+        return;
+    xp = ctx->selxp;
 
-    pg->SetPropertyValue(prop, "changed!");
+    pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
+    propDesc = pg->GetProperty("Description");
+    propAmount = pg->GetProperty("Amount");
+    propCat = pg->GetProperty("Category");
+    propDate = pg->GetProperty("Date");
 
+    desc = propDesc->GetValue().GetString();
+    amt = propAmount->GetValue().GetDouble();
+    catid = (uint64_t) propCat->GetValue().GetLong();
+    date = propDate->GetValue().GetDateTime();
+
+    str_assign(xp->desc, desc.mb_str());
+    xp->amt = amt;
+    xp->catid = catid;
+    xp->date = date.GetTicks();
+
+    db_edit_exp(ctx->expfiledb, xp);
+    date_to_cal(xp->date, &xpyear, &xpmonth, NULL);
+    ctx_refresh_expenses(ctx, xpyear, xpmonth);
+
+    RefreshNav();
+    RefreshExpenses();
 }
 
 void MyFrame::OnNavYear(wxSpinEvent& event) {

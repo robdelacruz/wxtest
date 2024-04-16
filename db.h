@@ -35,7 +35,7 @@ int cat_is_valid(cat_t *cat);
 
 exp_t *exp_new();
 void exp_free(exp_t *xp);
-void exp_dup(sqlite3 *db, exp_t *dest, exp_t *src);
+void exp_dup(exp_t *dest, exp_t *src);
 int exp_is_valid(exp_t *xp);
 
 int file_exists(const char *file);

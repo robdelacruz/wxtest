@@ -44,11 +44,6 @@ public:
     void OnNavYear(wxSpinEvent& event);
     void OnNavMonth(wxListEvent& event);
 
-
-
-
-
-
 private:
     wxDECLARE_EVENT_TABLE();
 };

@@ -178,22 +178,13 @@ void exp_free(exp_t *xp) {
     free(xp);
 }
 
-void exp_dup(sqlite3 *db, exp_t *dest, exp_t *src) {
+void exp_dup(exp_t *dest, exp_t *src) {
     dest->expid = src->expid;
     dest->date = src->date;
     str_assign(dest->desc, src->desc->s);
     dest->amt = src->amt;
     dest->catid = src->catid;
     str_assign(dest->catname, src->catname->s);
-
-// $$ What's the purpose of this?
-//    if (dest->catid != src->catid) {
-//        cat_t *cat = cat_new();
-//        db_find_cat_by_id(db, src->catid, cat);
-//        dest->catid = cat->catid;
-//        str_assign(dest->catname, cat->name->s);
-//        cat_free(cat);
-//    }
 }
 
 int exp_is_valid(exp_t *xp) {
