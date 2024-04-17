@@ -22,6 +22,7 @@ public:
     void RefreshNav();
     void RefreshExpenses(uint64_t sel_expid);
     void RefreshExpenseList(uint64_t sel_expid);
+    void RefreshSingleExpenseInList(exp_t *xp);
     void RefreshExpenseGrid(exp_t *xp);
 
     void EditExpense(exp_t *xp);
