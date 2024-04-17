@@ -1,7 +1,6 @@
 #ifndef EDITEXPENSEDIALOG_H
 #define EDITEXPENSEDIALOG_H
 
-#include <vector>
 #include "wx/wx.h"
 #include "wx/datectrl.h"
 #include "db.h"

@@ -4,12 +4,13 @@
 #include "wx/wx.h"
 #include "wx/listctrl.h"
 #include "wx/propgrid/propgrid.h"
-
 #include "db.h"
 
 class MyFrame : public wxFrame {
 public:
     MyFrame(const wxString& title);
+    ~MyFrame();
+
     void CreateMenuBar();
     void CreateControls();
     wxWindow *CreateExpensesNav(wxWindow *parent);
@@ -19,11 +20,9 @@ public:
     void ShowControls();
 
     void RefreshNav();
-    void RefreshExpenses();
-    void ClearExpenseList();
-    void RefreshExpenseList();
-    void ClearExpenseGrid();
-    void RefreshExpenseGrid();
+    void RefreshExpenses(uint64_t sel_expid);
+    void RefreshExpenseList(uint64_t sel_expid);
+    void RefreshExpenseGrid(exp_t *xp);
 
     void EditExpense(exp_t *xp);
 
@@ -45,7 +44,10 @@ public:
     void OnNavMonth(wxListEvent& event);
 
 private:
+    exp_t *m_propgrid_xp;
+
     wxDECLARE_EVENT_TABLE();
+
 };
 
 #endif

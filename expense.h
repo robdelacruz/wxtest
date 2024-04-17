@@ -12,10 +12,9 @@ extern "C" {
 typedef struct {
     str_t *expfile;
     sqlite3 *expfiledb;
-    date_t dt;
+    int year, month;
     array_t *xps;
     array_t *cats;
-    exp_t *selxp;
 } ExpenseContext;
 
 const char *exp_strerror(int errnum);
@@ -35,10 +34,6 @@ int ctx_refresh_expenses(ExpenseContext *ctx, int year, int month);
 int ctx_refresh_expenses_prev_month(ExpenseContext *ctx);
 int ctx_refresh_expenses_next_month(ExpenseContext *ctx);
 int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *sum);
-
-void ctx_select_expense(ExpenseContext *ctx, exp_t *selxp);
-exp_t *ctx_get_selected_expense(ExpenseContext *ctx);
-
 
 #ifdef __cplusplus
 }
