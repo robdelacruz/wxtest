@@ -20,8 +20,8 @@ public:
     void ShowControls();
 
     void RefreshNav();
-    void RefreshExpenses(uint64_t sel_expid);
-    void RefreshExpenseList(uint64_t sel_expid);
+    void RefreshExpenses(uint64_t sel_expid, long sel_row);
+    void RefreshExpenseList(uint64_t sel_expid, long sel_row);
     void RefreshSingleExpenseInList(exp_t *xp);
     void RefreshExpenseGrid(exp_t *xp);
 
@@ -34,6 +34,7 @@ public:
 
     void OnExpenseNew(wxCommandEvent& event);
     void OnExpenseEdit(wxCommandEvent& event);
+    void OnExpenseDel(wxCommandEvent& event);
 
     void OnPrevMonth(wxCommandEvent& event);
     void OnNextMonth(wxCommandEvent& event);

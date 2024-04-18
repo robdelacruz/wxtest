@@ -26,6 +26,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
 
     EVT_MENU(ID_EXPENSE_NEW, MyFrame::OnExpenseNew)
     EVT_MENU(ID_EXPENSE_EDIT, MyFrame::OnExpenseEdit)
+    EVT_MENU(ID_EXPENSE_DEL, MyFrame::OnExpenseDel)
 
     EVT_SPINCTRL(ID_NAV_YEAR_SPIN, MyFrame::OnNavYear)
     EVT_LIST_ITEM_SELECTED(ID_NAV_MONTH_LIST, MyFrame::OnNavMonth)
@@ -50,7 +51,7 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefau
     CreateControls();
     ShowControls();
     RefreshNav();
-    RefreshExpenses(0);
+    RefreshExpenses(0, 0);
 }
 
 MyFrame::~MyFrame() {
@@ -275,7 +276,7 @@ void MyFrame::RefreshNav() {
         lvMonths->SetItem(i, 1, buf);
     }
 }
-void MyFrame::RefreshExpenses(uint64_t sel_expid) {
+void MyFrame::RefreshExpenses(uint64_t sel_expid, long sel_row) {
     ExpenseContext *ctx = getContext();
     wxStaticText *st;
     char buf[24];
@@ -289,16 +290,19 @@ void MyFrame::RefreshExpenses(uint64_t sel_expid) {
     // which calls RefreshExpenseGrid(xp).
 
     RefreshExpenseGrid(NULL);
-    RefreshExpenseList(sel_expid);
+    RefreshExpenseList(sel_expid, sel_row);
 
     wxWindow::FindWindowById(ID_EXPENSES_PANEL)->Layout();
 }
-void MyFrame::RefreshExpenseList(uint64_t sel_expid) {
+
+// To select row number: RefreshExpenseList(0, rownum)
+// To select expense id: RefreshExpenseList(expid, 0)
+void MyFrame::RefreshExpenseList(uint64_t sel_expid, long sel_row) {
     ExpenseContext *ctx = getContext();
     wxListView *lv;
     exp_t *xp;
     char buf[24];
-    bool fItemSelected = false;
+    bool fSelectedRow = false;
 
     lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
     lv->DeleteAllItems();
@@ -315,18 +319,18 @@ void MyFrame::RefreshExpenseList(uint64_t sel_expid) {
 
         lv->SetItemPtrData(i, (wxUIntPtr)xp);
 
-        // Restore selection of expense if found.
+        // Restore selection of expense.
         if (sel_expid != 0 && sel_expid == xp->expid) {
             lv->SetItemState(i, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
             lv->EnsureVisible(i);
-            fItemSelected = true;
+            fSelectedRow = true;
         }
     }
 
-    // If no previous selected expense, select first row.
-    if (!fItemSelected && ctx->xps->len > 0) {
-        lv->SetItemState(0, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
-        lv->EnsureVisible(0);
+    // Restore previous row selection.
+    if (!fSelectedRow && (size_t) sel_row < ctx->xps->len) {
+        lv->SetItemState(sel_row, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+        lv->EnsureVisible(sel_row);
     }
 }
 void MyFrame::RefreshSingleExpenseInList(exp_t *xp) {
@@ -383,7 +387,7 @@ void MyFrame::EditExpense(exp_t *xp) {
         ctx_refresh_expenses(ctx, xpyear, xpmonth);
 
         RefreshNav();
-        RefreshExpenses(xp->expid);
+        RefreshExpenses(xp->expid, 0);
     }
 }
 
@@ -413,7 +417,7 @@ void MyFrame::OnFileNew(wxCommandEvent& event) {
     CreateMenuBar();
     ShowControls();
     RefreshNav();
-    RefreshExpenses(0);
+    RefreshExpenses(0, 0);
 }
 void MyFrame::OnFileOpen(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
@@ -435,7 +439,7 @@ void MyFrame::OnFileOpen(wxCommandEvent& event) {
     CreateMenuBar();
     ShowControls();
     RefreshNav();
-    RefreshExpenses(0);
+    RefreshExpenses(0, 0);
 }
 void MyFrame::OnFileClose(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
@@ -444,7 +448,7 @@ void MyFrame::OnFileClose(wxCommandEvent& event) {
     CreateMenuBar();
     ShowControls();
     RefreshNav();
-    RefreshExpenses(0);
+    RefreshExpenses(0, 0);
 }
 void MyFrame::OnFileExit(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
@@ -466,18 +470,35 @@ void MyFrame::OnExpenseEdit(wxCommandEvent& event) {
     assert(xp != NULL);
     EditExpense(xp);
 }
+void MyFrame::OnExpenseDel(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
+    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
+    long lsel = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    if (lsel == -1)
+        return;
+
+    exp_t *xp = (exp_t *) lv->GetItemData(lsel);
+    assert(xp != NULL);
+
+    wxMessageDialog dlg(this, wxString::Format("Delete '%s'?", wxString::FromUTF8(xp->desc->s)), "Confirm Delete", wxYES_NO | wxNO_DEFAULT); 
+    if (dlg.ShowModal() == wxID_YES) {
+        db_del_exp(ctx->expfiledb, xp->expid);
+        ctx_refresh_expenses(ctx, 0, 0);
+        RefreshExpenses(0, lsel);
+    }
+}
 
 void MyFrame::OnPrevMonth(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
     ctx_refresh_expenses_prev_month(ctx);
     RefreshNav();
-    RefreshExpenses(0);
+    RefreshExpenses(0, 0);
 }
 void MyFrame::OnNextMonth(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
     ctx_refresh_expenses_next_month(ctx);
     RefreshNav();
-    RefreshExpenses(0);
+    RefreshExpenses(0, 0);
 }
 void MyFrame::OnListItemSelected(wxListEvent& event) {
     wxListItem li = event.GetItem();
@@ -543,13 +564,13 @@ void MyFrame::OnNavYear(wxSpinEvent& event) {
 
     ctx_refresh_expenses(ctx, year, 0);
     RefreshNav();
-    RefreshExpenses(0);
+    RefreshExpenses(0, 0);
 }
 void MyFrame::OnNavMonth(wxListEvent& event) {
     ExpenseContext *ctx = getContext();
     int month = event.GetIndex()+1;
 
     ctx_refresh_expenses(ctx, 0, month);
-    RefreshExpenses(0);
+    RefreshExpenses(0, 0);
 }
 
