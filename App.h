@@ -8,6 +8,7 @@ enum {
     ID_EXPENSE_NEW = wxID_HIGHEST,
     ID_EXPENSE_EDIT,
     ID_EXPENSE_DEL,
+    ID_EXPENSE_CATEGORIES,
 
     ID_NO_OPEN_FILE,
     ID_MAIN_SPLIT,
@@ -29,8 +30,12 @@ enum {
     ID_EDITEXPENSE_CATEGORY,
     ID_EDITEXPENSE_DATE,
 
+    ID_SETUPCATEGORIES_LIST,
+
     ID_COUNT
 };
+
+#define BTN_HEIGHT 25
 
 class MyApp : public wxApp {
 public:

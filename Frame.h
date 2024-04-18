@@ -35,6 +35,7 @@ public:
     void OnExpenseNew(wxCommandEvent& event);
     void OnExpenseEdit(wxCommandEvent& event);
     void OnExpenseDel(wxCommandEvent& event);
+    void OnExpenseCategories(wxCommandEvent& event);
 
     void OnPrevMonth(wxCommandEvent& event);
     void OnNextMonth(wxCommandEvent& event);

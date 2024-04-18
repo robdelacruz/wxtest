@@ -16,6 +16,7 @@
 #include "App.h"
 #include "Frame.h"
 #include "EditExpenseDialog.h"
+#include "SetupCategoriesDialog.h"
 #include "db.h"
 
 wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
@@ -27,6 +28,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(ID_EXPENSE_NEW, MyFrame::OnExpenseNew)
     EVT_MENU(ID_EXPENSE_EDIT, MyFrame::OnExpenseEdit)
     EVT_MENU(ID_EXPENSE_DEL, MyFrame::OnExpenseDel)
+    EVT_MENU(ID_EXPENSE_CATEGORIES, MyFrame::OnExpenseCategories)
 
     EVT_SPINCTRL(ID_NAV_YEAR_SPIN, MyFrame::OnNavYear)
     EVT_LIST_ITEM_SELECTED(ID_NAV_MONTH_LIST, MyFrame::OnNavMonth)
@@ -83,6 +85,8 @@ void MyFrame::CreateMenuBar() {
         menu->Append(ID_EXPENSE_NEW, wxT("&New\tCtrl-N"), wxT("New Expense"));
         menu->Append(ID_EXPENSE_EDIT, wxT("&Edit\tCtrl-E"), wxT("Edit Expense"));
         menu->Append(ID_EXPENSE_DEL, wxT("&Delete\tCtrl-X"), wxT("Delete Expense"));
+        menu->AppendSeparator();
+        menu->Append(ID_EXPENSE_CATEGORIES, wxT("&Categories...\tCtrl-T"), wxT("Setup Categories..."));
         mb->Append(menu, wxT("&Expense"));
     }
     SetMenuBar(mb);
@@ -119,6 +123,7 @@ wxWindow* MyFrame::CreateExpensesNav(wxWindow *parent) {
     int month;
 
     pnl = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    //spinYear = new wxSpinCtrl(pnl, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxSize(-1, BTN_HEIGHT), wxSP_ARROW_KEYS, 1900, 2100);
     spinYear = new wxSpinCtrl(pnl, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1900, 2100);
     lvMonths = new wxListView(pnl, ID_NAV_MONTH_LIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
     lvMonths->AppendColumn("Month");
@@ -137,7 +142,8 @@ wxWindow* MyFrame::CreateExpensesNav(wxWindow *parent) {
     }
 
     vbox = new wxBoxSizer(wxVERTICAL);
-    vbox->Add(spinYear, 0, wxEXPAND|wxALL, 5);
+    vbox->Add(spinYear, 0, wxEXPAND, 0);
+    vbox->AddSpacer(5);
     vbox->Add(lvMonths, 1, wxEXPAND, 0);
     pnl->SetSizer(vbox);
     pnl->Fit();
@@ -183,8 +189,8 @@ wxWindow* MyFrame::CreateExpensesList(wxWindow *parent) {
     colAmount.SetAlign(wxLIST_FORMAT_RIGHT);
     lv->SetColumn(2, colAmount);
 
-    btnPrev = new wxBitmapButton(pnl, ID_EXPENSES_PREV, wxBitmap(back_xpm));
-    btnNext = new wxBitmapButton(pnl, ID_EXPENSES_NEXT, wxBitmap(forward_xpm));
+    btnPrev = new wxBitmapButton(pnl, ID_EXPENSES_PREV, wxBitmap(back_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
+    btnNext = new wxBitmapButton(pnl, ID_EXPENSES_NEXT, wxBitmap(forward_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
     hbox = new wxBoxSizer(wxHORIZONTAL);
     hbox->Add(btnPrev, 0, wxALIGN_CENTER, 0);
     hbox->AddSpacer(5);
@@ -194,11 +200,12 @@ wxWindow* MyFrame::CreateExpensesList(wxWindow *parent) {
     hbox->AddStretchSpacer();
     hbox->Add(new wxStaticText(pnl, wxID_ANY, "Filter:"), 0, wxALIGN_CENTER, 0);
     hbox->AddSpacer(5);
-    txtFilter = new wxTextCtrl(pnl, ID_EXPENSES_FILTERTEXT, wxT(""), wxDefaultPosition, wxSize(300,-1));
+    txtFilter = new wxTextCtrl(pnl, ID_EXPENSES_FILTERTEXT, wxT(""), wxDefaultPosition, wxSize(300, BTN_HEIGHT));
     hbox->Add(txtFilter, 0, wxALIGN_CENTER, 0);
 
     vbox = new wxBoxSizer(wxVERTICAL);
-    vbox->Add(hbox, 0, wxEXPAND|wxTOP|wxBOTTOM, 5);
+    vbox->Add(hbox, 0, wxEXPAND, 0);
+    vbox->AddSpacer(5);
     vbox->Add(lv, 1, wxEXPAND, 0);
     pnl->SetSizer(vbox);
 
@@ -486,6 +493,13 @@ void MyFrame::OnExpenseDel(wxCommandEvent& event) {
         ctx_refresh_expenses(ctx, 0, 0);
         RefreshExpenses(0, lsel);
     }
+}
+void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
+
+    SetupCategoriesDialog dlg(this);
+    dlg.ShowModal();
+    ctx_refresh_categories(ctx);
 }
 
 void MyFrame::OnPrevMonth(wxCommandEvent& event) {
