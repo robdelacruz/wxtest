@@ -309,7 +309,6 @@ void MyFrame::RefreshExpenseList(uint64_t sel_expid, long sel_row) {
     wxListView *lv;
     exp_t *xp;
     char buf[24];
-    bool fSelectedRow = false;
 
     lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
     lv->DeleteAllItems();
@@ -326,16 +325,11 @@ void MyFrame::RefreshExpenseList(uint64_t sel_expid, long sel_row) {
 
         lv->SetItemPtrData(i, (wxUIntPtr)xp);
 
-        // Restore selection of expense.
-        if (sel_expid != 0 && sel_expid == xp->expid) {
-            lv->SetItemState(i, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
-            lv->EnsureVisible(i);
-            fSelectedRow = true;
-        }
+        if (sel_expid != 0 && sel_expid == xp->expid)
+            sel_row = i;
     }
-
     // Restore previous row selection.
-    if (!fSelectedRow && (size_t) sel_row < ctx->xps->len) {
+    if (sel_row >= 0 && (size_t) sel_row < ctx->xps->len) {
         lv->SetItemState(sel_row, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
         lv->EnsureVisible(sel_row);
     }
@@ -466,6 +460,7 @@ void MyFrame::OnFileExit(wxCommandEvent& event) {
 void MyFrame::OnExpenseNew(wxCommandEvent& event) {
     exp_t *xp = exp_new();
     EditExpense(xp);
+    exp_free(xp);
 }
 void MyFrame::OnExpenseEdit(wxCommandEvent& event) {
     wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
@@ -488,18 +483,28 @@ void MyFrame::OnExpenseDel(wxCommandEvent& event) {
     assert(xp != NULL);
 
     wxMessageDialog dlg(this, wxString::Format("Delete '%s'?", wxString::FromUTF8(xp->desc->s)), "Confirm Delete", wxYES_NO | wxNO_DEFAULT); 
-    if (dlg.ShowModal() == wxID_YES) {
-        db_del_exp(ctx->expfiledb, xp->expid);
-        ctx_refresh_expenses(ctx, 0, 0);
-        RefreshExpenses(0, lsel);
-    }
+    if (dlg.ShowModal() != wxID_YES)
+        return;
+    db_del_exp(ctx->expfiledb, xp->expid);
+
+    ctx_refresh_expenses(ctx, 0, 0);
+    if ((size_t) lsel > ctx->xps->len-1)
+        lsel = ctx->xps->len-1;
+    RefreshExpenses(0, lsel);
 }
 void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
+    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
+    long lsel = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    if (lsel == -1)
+        lsel = 0;
 
     SetupCategoriesDialog dlg(this);
     dlg.ShowModal();
+
     ctx_refresh_categories(ctx);
+    ctx_refresh_expenses(ctx, 0, 0);
+    RefreshExpenses(0, lsel);
 }
 
 void MyFrame::OnPrevMonth(wxCommandEvent& event) {

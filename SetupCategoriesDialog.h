@@ -9,6 +9,12 @@ public:
 
 private:
     void CreateControls();
+    void ShowControls();
+    void Refresh(uint64_t sel_catid, int sel_row);
+    void OnListBoxSelected(wxCommandEvent& event);
+    void OnAdd(wxCommandEvent& event);
+    void OnEdit(wxCommandEvent& event);
+    void OnDelete(wxCommandEvent& event);
 
     wxDECLARE_EVENT_TABLE();
 };

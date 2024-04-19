@@ -35,6 +35,8 @@ int ctx_refresh_expenses_prev_month(ExpenseContext *ctx);
 int ctx_refresh_expenses_next_month(ExpenseContext *ctx);
 int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *sum);
 
+int ctx_delete_category(ExpenseContext *ctx, uint64_t catid);
+
 #ifdef __cplusplus
 }
 #endif

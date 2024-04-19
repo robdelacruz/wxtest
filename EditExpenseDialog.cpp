@@ -37,7 +37,7 @@ void EditExpenseDialog::CreateControls() {
     ExpenseContext *ctx = getContext();
     wxBoxSizer *top;
     wxBoxSizer *vbox;
-    wxBoxSizer *hbox;
+    wxStdDialogButtonSizer *btnbox;
     wxStaticBoxSizer *staticbox;
     wxFlexGridSizer *gs;
     wxStaticText *stDesc, *stAmt, *stCat, *stDate;
@@ -73,6 +73,9 @@ void EditExpenseDialog::CreateControls() {
     choiceCat = new wxChoice(sb, ID_EDITEXPENSE_CATEGORY, wxDefaultPosition, wxDefaultSize, choices, 0, vldCat);
     dpDate = new wxDatePickerCtrl(sb, ID_EDITEXPENSE_DATE, m_date, wxDefaultPosition, wxDefaultSize, wxDP_DEFAULT|wxDP_SHOWCENTURY);
 
+    btnOK = new wxButton(this, wxID_OK, "OK");
+    btnCancel = new wxButton(this, wxID_CANCEL, "Cancel");
+
     gs = new wxFlexGridSizer(4, 2, 5, 5);
     gs->Add(stDesc, 0, wxALIGN_CENTER_VERTICAL, 0);
     gs->Add(tcDesc, 1, wxALIGN_CENTER_VERTICAL, 0);
@@ -86,17 +89,15 @@ void EditExpenseDialog::CreateControls() {
     staticbox->Add(gs, 1, wxEXPAND|wxLEFT|wxRIGHT, 10);
     staticbox->AddSpacer(10);
 
-    hbox = new wxBoxSizer(wxHORIZONTAL);
-    btnOK = new wxButton(this, wxID_OK, "OK");
-    btnCancel = new wxButton(this, wxID_CANCEL, "Cancel");
-    hbox->Add(btnOK, 0, 0, 0);
-    hbox->AddSpacer(10);
-    hbox->Add(btnCancel, 0, 0, 0);
+    btnbox = new wxStdDialogButtonSizer();
+    btnbox->AddButton(btnOK);
+    btnbox->AddButton(btnCancel);
+    btnbox->Realize();
 
     vbox = new wxBoxSizer(wxVERTICAL);
     vbox->Add(staticbox, 0, wxEXPAND, 0);
     vbox->AddSpacer(15);
-    vbox->Add(hbox, 0, wxALIGN_CENTER, 0);
+    vbox->Add(btnbox, 0, wxEXPAND, 0);
 
     top = new wxBoxSizer(wxVERTICAL);
     top->Add(vbox, 1, wxEXPAND|wxALL, 10);

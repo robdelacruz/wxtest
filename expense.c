@@ -209,3 +209,24 @@ int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *su
     return db_sum_amount_exp(ctx->expfiledb, dtstart, dtend, sum);
 }
 
+int ctx_delete_category(ExpenseContext *ctx, uint64_t catid) {
+    int z;
+    sqlite3 *db = ctx->expfiledb;
+
+    sqlite3_exec(db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+
+    z = db_update_exp_change_catid(db, catid, 0);
+    if (z != 0) {
+        sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+        return z;
+    }
+    z = db_del_cat(db, catid);
+    if (z != 0) {
+        sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+        return z;
+    }
+
+    sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+    return 0;
+}
+

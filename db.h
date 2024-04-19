@@ -45,19 +45,20 @@ int open_expense_file(const char *dbfile, sqlite3 **pdb);
 
 int db_select_cat(sqlite3 *db, array_t *cats);
 int db_find_cat_by_id(sqlite3 *db, uint64_t catid, cat_t *cat);
-int db_find_cat_by_name(sqlite3 *db, str_t *name, uint64_t *catid);
+int db_find_cat_by_name(sqlite3 *db, const char *name, uint64_t *catid);
 int db_add_cat(sqlite3 *db, cat_t *cat);
 int db_edit_cat(sqlite3 *db, cat_t *cat);
-int db_del_cat(sqlite3 *db, uint catid);
+int db_del_cat(sqlite3 *db, uint64_t catid);
 
 int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps);
-int db_find_exp_by_id(sqlite3 *db, uint expid, exp_t *xp);
+int db_find_exp_by_id(sqlite3 *db, uint64_t expid, exp_t *xp);
 int db_sum_amount_exp(sqlite3 *db, date_t min_date, date_t max_date, double *sum);
+int db_count_exp_with_catid(sqlite3 *db, uint64_t catid, long *count);
 
 int db_add_exp(sqlite3 *db, exp_t *xp);
 int db_edit_exp(sqlite3 *db, exp_t *xp);
-int db_del_exp(sqlite3 *db, uint expid);
-
+int db_del_exp(sqlite3 *db, uint64_t expid);
+int db_update_exp_change_catid(sqlite3 *db, uint64_t old_catid, uint64_t new_catid);
 
 #ifdef __cplusplus
 }
