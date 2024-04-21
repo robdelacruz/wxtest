@@ -19,6 +19,7 @@ public:
     wxWindow *CreateExpensePropGrid(wxWindow *parent);
     void ShowControls();
 
+    void RefreshMenu();
     void RefreshNav();
     void RefreshExpenses(uint64_t sel_expid, long sel_row);
     void RefreshExpenseList(uint64_t sel_expid, long sel_row);
@@ -40,6 +41,7 @@ public:
     void OnPrevMonth(wxCommandEvent& event);
     void OnNextMonth(wxCommandEvent& event);
     void OnListItemSelected(wxListEvent& event);
+    void OnListItemDeselected(wxListEvent& event);
     void OnListItemActivated(wxListEvent& event);
     void OnPropertyGridChanged(wxPropertyGridEvent& event);
 

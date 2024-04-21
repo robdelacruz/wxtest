@@ -36,6 +36,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevMonth)
     EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNextMonth)
     EVT_LIST_ITEM_SELECTED(ID_EXPENSES_LIST, MyFrame::OnListItemSelected)
+    EVT_LIST_ITEM_DESELECTED(ID_EXPENSES_LIST, MyFrame::OnListItemDeselected)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnListItemActivated)
 
     EVT_PG_CHANGED(ID_EXPENSE_GRID, MyFrame::OnPropertyGridChanged)
@@ -52,6 +53,7 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefau
     SetStatusText(wxT("Expense Buddy"));
     CreateControls();
     ShowControls();
+    RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
 }
@@ -267,6 +269,21 @@ void MyFrame::ShowControls() {
     Layout();
 }
 
+void MyFrame::RefreshMenu() {
+    ExpenseContext *ctx = getContext();
+    wxMenuBar *mb = GetMenuBar();
+
+    if (!ctx_is_open_expfile(ctx))
+        return;
+
+    if (ctx->xps->len > 0) {
+        mb->Enable(ID_EXPENSE_EDIT, true);
+        mb->Enable(ID_EXPENSE_DEL, true);
+    } else {
+        mb->Enable(ID_EXPENSE_EDIT, false);
+        mb->Enable(ID_EXPENSE_DEL, false);
+    }
+}
 void MyFrame::RefreshNav() {
     ExpenseContext *ctx = getContext();
     wxSpinCtrl *spinYear = (wxSpinCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR_SPIN);
@@ -387,6 +404,7 @@ void MyFrame::EditExpense(exp_t *xp) {
         date_to_cal(xp->date, &xpyear, &xpmonth, NULL);
         ctx_refresh_expenses(ctx, xpyear, xpmonth);
 
+        RefreshMenu();
         RefreshNav();
         RefreshExpenses(xp->expid, 0);
     }
@@ -417,6 +435,7 @@ void MyFrame::OnFileNew(wxCommandEvent& event) {
 
     CreateMenuBar();
     ShowControls();
+    RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
 }
@@ -439,6 +458,7 @@ void MyFrame::OnFileOpen(wxCommandEvent& event) {
 
     CreateMenuBar();
     ShowControls();
+    RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
 }
@@ -448,6 +468,7 @@ void MyFrame::OnFileClose(wxCommandEvent& event) {
 
     CreateMenuBar();
     ShowControls();
+    RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
 }
@@ -510,21 +531,32 @@ void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
 void MyFrame::OnPrevMonth(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
     ctx_refresh_expenses_prev_month(ctx);
+    RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
 }
 void MyFrame::OnNextMonth(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
     ctx_refresh_expenses_next_month(ctx);
+    RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
 }
 void MyFrame::OnListItemSelected(wxListEvent& event) {
-    wxListItem li = event.GetItem();
-    exp_t *xp = (exp_t *)li.GetData();
+    wxMenuBar *mb = GetMenuBar();
+    exp_t *xp = (exp_t *)event.GetItem().GetData();
     assert(xp != NULL);
 
+    mb->Enable(ID_EXPENSE_EDIT, true);
+    mb->Enable(ID_EXPENSE_DEL, true);
     RefreshExpenseGrid(xp);
+}
+void MyFrame::OnListItemDeselected(wxListEvent& event) {
+    wxMenuBar *mb = GetMenuBar();
+
+    mb->Enable(ID_EXPENSE_EDIT, false);
+    mb->Enable(ID_EXPENSE_DEL, false);
+    RefreshExpenseGrid(NULL);
 }
 void MyFrame::OnListItemActivated(wxListEvent& event) {
     wxListItem li = event.GetItem();
@@ -582,6 +614,7 @@ void MyFrame::OnNavYear(wxSpinEvent& event) {
     int year = event.GetPosition();
 
     ctx_refresh_expenses(ctx, year, 0);
+    RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
 }
@@ -590,6 +623,7 @@ void MyFrame::OnNavMonth(wxListEvent& event) {
     int month = event.GetIndex()+1;
 
     ctx_refresh_expenses(ctx, 0, month);
+    RefreshMenu();
     RefreshExpenses(0, 0);
 }
 
