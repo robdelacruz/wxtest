@@ -295,7 +295,7 @@ void MyFrame::RefreshNav() {
     lvMonths->Select(ctx->month-1);
 
     for (int i=0; i < 12; i++) {
-        ctx_expenses_sum_amount(ctx, ctx->year, i+1, &sumamt);
+        ctx_expenses_subtotal_month(ctx, ctx->year, i+1, &sumamt);
         snprintf(buf, sizeof(buf), "%9.2f", sumamt);
         lvMonths->SetItem(i, 1, buf);
     }
@@ -392,7 +392,7 @@ void MyFrame::RefreshExpenseGrid(exp_t *xp) {
 
 void MyFrame::EditExpense(exp_t *xp) {
     ExpenseContext *ctx = getContext();
-    int xpyear, xpmonth;
+    int xpyear, xpmonth, xpday;
 
     EditExpenseDialog dlg(this, xp);
     if (dlg.ShowModal() == wxID_OK) {
@@ -401,8 +401,8 @@ void MyFrame::EditExpense(exp_t *xp) {
         else
             db_edit_exp(ctx->expfiledb, xp);
 
-        date_to_cal(xp->date, &xpyear, &xpmonth, NULL);
-        ctx_refresh_expenses(ctx, xpyear, xpmonth);
+        date_to_cal(xp->date, &xpyear, &xpmonth, &xpday);
+        ctx_refresh_expenses(ctx, xpyear, xpmonth, xpday);
 
         RefreshMenu();
         RefreshNav();
@@ -508,7 +508,7 @@ void MyFrame::OnExpenseDel(wxCommandEvent& event) {
         return;
     db_del_exp(ctx->expfiledb, xp->expid);
 
-    ctx_refresh_expenses(ctx, 0, 0);
+    ctx_refresh_expenses(ctx, 0, 0, 0);
     if ((size_t) lsel > ctx->xps->len-1)
         lsel = ctx->xps->len-1;
     RefreshExpenses(0, lsel);
@@ -524,20 +524,22 @@ void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
     dlg.ShowModal();
 
     ctx_refresh_categories(ctx);
-    ctx_refresh_expenses(ctx, 0, 0);
+    ctx_refresh_expenses(ctx, 0, 0, 0);
     RefreshExpenses(0, lsel);
 }
 
 void MyFrame::OnPrevMonth(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    ctx_refresh_expenses_prev_month(ctx);
+    ctx_set_date_prev_month(ctx);
+    ctx_refresh_expenses(ctx, 0, 0, 0);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
 }
 void MyFrame::OnNextMonth(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    ctx_refresh_expenses_next_month(ctx);
+    ctx_set_date_next_month(ctx);
+    ctx_refresh_expenses(ctx, 0, 0, 0);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
@@ -613,7 +615,7 @@ void MyFrame::OnNavYear(wxSpinEvent& event) {
     ExpenseContext *ctx = getContext();
     int year = event.GetPosition();
 
-    ctx_refresh_expenses(ctx, year, 0);
+    ctx_refresh_expenses(ctx, year, 0, 0);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
@@ -622,7 +624,7 @@ void MyFrame::OnNavMonth(wxListEvent& event) {
     ExpenseContext *ctx = getContext();
     int month = event.GetIndex()+1;
 
-    ctx_refresh_expenses(ctx, 0, month);
+    ctx_refresh_expenses(ctx, 0, month, 0);
     RefreshMenu();
     RefreshExpenses(0, 0);
 }

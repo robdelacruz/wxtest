@@ -9,10 +9,16 @@ extern "C" {
 #include "clib.h"
 #include "db.h"
 
+typedef enum {
+    EXPENSE_VIEW_MONTH = 0,
+    EXPENSE_VIEW_DAY
+} ExpenseViewType;
+
 typedef struct {
     str_t *expfile;
     sqlite3 *expfiledb;
-    int year, month;
+    ExpenseViewType viewtype;
+    int year, month, day;
     array_t *xps;
     array_t *cats;
 } ExpenseContext;
@@ -27,13 +33,17 @@ int ctx_create_expense_file(ExpenseContext *ctx, const char *filename);
 int ctx_open_expense_file(ExpenseContext *ctx, const char *filename);
 int ctx_init_from_args(ExpenseContext *ctx, int argc, char **argv);
 int ctx_is_open_expfile(ExpenseContext *ctx);
-void ctx_set_date(int year, int month);
+void ctx_set_date(ExpenseContext *ctx, int year, int month, int day);
+void ctx_set_date_prev_month(ExpenseContext *ctx);
+void ctx_set_date_next_month(ExpenseContext *ctx);
+void ctx_set_date_prev_day(ExpenseContext *ctx);
+void ctx_set_date_next_day(ExpenseContext *ctx);
 
 int ctx_refresh_categories(ExpenseContext *ctx);
-int ctx_refresh_expenses(ExpenseContext *ctx, int year, int month);
-int ctx_refresh_expenses_prev_month(ExpenseContext *ctx);
-int ctx_refresh_expenses_next_month(ExpenseContext *ctx);
-int ctx_expenses_sum_amount(ExpenseContext *ctx, int year, int month, double *sum);
+int ctx_refresh_expenses(ExpenseContext *ctx, int year, int month, int day);
+int ctx_expenses_subtotal_year(ExpenseContext *ctx, int year, double *sum);
+int ctx_expenses_subtotal_month(ExpenseContext *ctx, int year, int month, double *sum);
+int ctx_expenses_subtotal_day(ExpenseContext *ctx, int year, int month, int day, double *sum);
 
 int ctx_delete_category(ExpenseContext *ctx, uint64_t catid);
 

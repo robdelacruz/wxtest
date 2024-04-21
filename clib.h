@@ -67,6 +67,8 @@ void date_to_iso(date_t dt, char *buf, size_t buf_len);
 void date_to_cal(date_t dt, int *retyear, int *retmonth, int *retday);
 date_t date_prev_month(date_t dt);
 date_t date_next_month(date_t dt);
+date_t date_prev_day(date_t dt);
+date_t date_next_day(date_t dt);
 
 array_t *array_new(size_t cap);
 void array_free(array_t *a);

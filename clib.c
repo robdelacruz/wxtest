@@ -95,23 +95,25 @@ date_t date_prev_month(date_t dt) {
     if (year == 0)
         return dt;
 
-    month--;
-    if (month < 1) {
-        month = 12;
-        year--;
-    }
-    return date_from_cal(year, month, day);
+    if (month == 1)
+        return date_from_cal(year-1, 12, day);
+    else
+        return date_from_cal(year, month-1, day);
 }
 date_t date_next_month(date_t dt) {
     int year, month, day;
     date_to_cal(dt, &year, &month, &day);
 
-    month++;
-    if (month > 12) {
-        month = 1;
-        year++;
-    }
-    return date_from_cal(year, month, day);
+    if (month == 12)
+        return date_from_cal(year+1, 1, day);
+    else
+        return date_from_cal(year, month+1, day);
+}
+date_t date_prev_day(date_t dt) {
+    return dt - 24*60*60;
+}
+date_t date_next_day(date_t dt) {
+    return dt + 24*60*60;
 }
 
 arena_t new_arena(uint64_t cap) {
