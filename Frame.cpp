@@ -5,6 +5,8 @@
 #include "wx/listctrl.h"
 #include "wx/splitter.h"
 #include "wx/spinctrl.h"
+#include "wx/calctrl.h"
+#include "wx/simplebook.h"
 #include "wx/filename.h"
 #include "wx/propgrid/propgrid.h"
 #include "wx/propgrid/advprops.h"
@@ -33,8 +35,8 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_SPINCTRL(ID_NAV_YEAR_SPIN, MyFrame::OnNavYear)
     EVT_LIST_ITEM_SELECTED(ID_NAV_MONTH_LIST, MyFrame::OnNavMonth)
 
-    EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevMonth)
-    EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNextMonth)
+    EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevious)
+    EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNext)
     EVT_LIST_ITEM_SELECTED(ID_EXPENSES_LIST, MyFrame::OnListItemSelected)
     EVT_LIST_ITEM_DESELECTED(ID_EXPENSES_LIST, MyFrame::OnListItemDeselected)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnListItemActivated)
@@ -90,6 +92,11 @@ void MyFrame::CreateMenuBar() {
         menu->AppendSeparator();
         menu->Append(ID_EXPENSE_CATEGORIES, wxT("&Categories...\tCtrl-T"), wxT("Setup Categories..."));
         mb->Append(menu, wxT("&Expense"));
+
+        menu = new wxMenu;
+        menu->Append(ID_VIEW_MONTHLY, "&Monthly", "Monthly View", wxITEM_CHECK);
+        menu->Append(ID_VIEW_DAILY, "&Daily", "Daily View", wxITEM_CHECK);
+        mb->Append(menu, "&View");
     }
     SetMenuBar(mb);
 }
@@ -97,7 +104,8 @@ void MyFrame::CreateMenuBar() {
 void MyFrame::CreateControls() {
     wxStaticText *st;
     wxSplitterWindow *split;
-    wxWindow *pnlNav, *pnlView;
+    wxWindow *nav;
+    wxWindow *expview;
     wxBoxSizer *vbox;
 
     DestroyChildren();
@@ -105,9 +113,10 @@ void MyFrame::CreateControls() {
 
     st = new wxStaticText(this, ID_NO_OPEN_FILE, "No expense file open.", wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL);
     split = new wxSplitterWindow(this, ID_MAIN_SPLIT, wxDefaultPosition, wxDefaultSize, wxSP_3D);
-    pnlNav = CreateExpensesNav(split);
-    pnlView = CreateExpensesView(split);
-    split->SplitVertically(pnlNav, pnlView);
+    nav = CreateNav(split);
+    expview = CreateExpensesView(split);
+
+    split->SplitVertically(nav, expview);
     split->SetSashPosition(150);
 
     vbox = new wxBoxSizer(wxVERTICAL);
@@ -116,18 +125,22 @@ void MyFrame::CreateControls() {
     this->SetSizer(vbox);
 
 }
-wxWindow* MyFrame::CreateExpensesNav(wxWindow *parent) {
-    wxPanel *pnl;
+wxWindow* MyFrame::CreateNav(wxWindow *parent) {
+    wxSimplebook *book;
+    wxCalendarCtrl *cal;
+    wxPanel *pnlMonths;
     wxSpinCtrl *spinYear;
     wxListView *lvMonths;
     wxListItem colAmount;
-    wxBoxSizer *vbox;
+    wxBoxSizer *vboxMonths;
     int month;
 
-    pnl = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-    //spinYear = new wxSpinCtrl(pnl, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxSize(-1, BTN_HEIGHT), wxSP_ARROW_KEYS, 1900, 2100);
-    spinYear = new wxSpinCtrl(pnl, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1900, 2100);
-    lvMonths = new wxListView(pnl, ID_NAV_MONTH_LIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
+    book = new wxSimplebook(parent, ID_NAV_BOOK, wxDefaultPosition, wxDefaultSize);
+
+    pnlMonths = new wxPanel(book, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    //spinYear = new wxSpinCtrl(pnlMonths, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxSize(-1, BTN_HEIGHT), wxSP_ARROW_KEYS, 1900, 2100);
+    spinYear = new wxSpinCtrl(pnlMonths, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1900, 2100);
+    lvMonths = new wxListView(pnlMonths, ID_NAV_MONTH_LIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
     lvMonths->AppendColumn("Month");
     lvMonths->AppendColumn("Amount");
     lvMonths->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
@@ -143,14 +156,18 @@ wxWindow* MyFrame::CreateExpensesNav(wxWindow *parent) {
         month++;
     }
 
-    vbox = new wxBoxSizer(wxVERTICAL);
-    vbox->Add(spinYear, 0, wxEXPAND, 0);
-    vbox->AddSpacer(5);
-    vbox->Add(lvMonths, 1, wxEXPAND, 0);
-    pnl->SetSizer(vbox);
-    pnl->Fit();
+    vboxMonths = new wxBoxSizer(wxVERTICAL);
+    vboxMonths->Add(spinYear, 0, wxEXPAND, 0);
+    vboxMonths->AddSpacer(5);
+    vboxMonths->Add(lvMonths, 1, wxEXPAND, 0);
+    pnlMonths->SetSizer(vboxMonths);
 
-    return pnl;
+    cal = new wxCalendarCtrl(book, ID_NAV_CAL, wxDefaultDateTime, wxDefaultPosition, wxDefaultSize, wxCAL_SHOW_HOLIDAYS);
+
+    book->AddPage(pnlMonths, "month"); // selection 0
+    book->AddPage(cal, "day");         // selection 1
+
+    return book;
 }
 wxWindow* MyFrame::CreateExpensesView(wxWindow *parent) {
     wxSplitterWindow *split;
@@ -246,6 +263,7 @@ void MyFrame::ShowControls() {
     ExpenseContext *ctx = getContext();
     wxWindow *stNoOpenFile;
     wxWindow *splitMain;
+    wxSimplebook *navbook;
     wxString title, filename, ext;
 
     stNoOpenFile = wxWindow::FindWindowById(ID_NO_OPEN_FILE);
@@ -267,6 +285,12 @@ void MyFrame::ShowControls() {
     stNoOpenFile->Show(false);
     splitMain->Show(true);
     Layout();
+
+    navbook = (wxSimplebook *) wxWindow::FindWindowById(ID_NAV_BOOK);
+    if (ctx->viewtype == EXPENSE_VIEW_MONTH)
+        navbook->SetSelection(0);
+    else if (ctx->viewtype == EXPENSE_VIEW_DAY)
+        navbook->SetSelection(1);
 }
 
 void MyFrame::RefreshMenu() {
@@ -402,7 +426,8 @@ void MyFrame::EditExpense(exp_t *xp) {
             db_edit_exp(ctx->expfiledb, xp);
 
         date_to_cal(xp->date, &xpyear, &xpmonth, &xpday);
-        ctx_refresh_expenses(ctx, xpyear, xpmonth, xpday);
+        ctx_set_date(ctx, xpyear, xpmonth, xpday);
+        ctx_refresh_expenses(ctx);
 
         RefreshMenu();
         RefreshNav();
@@ -508,7 +533,7 @@ void MyFrame::OnExpenseDel(wxCommandEvent& event) {
         return;
     db_del_exp(ctx->expfiledb, xp->expid);
 
-    ctx_refresh_expenses(ctx, 0, 0, 0);
+    ctx_refresh_expenses(ctx);
     if ((size_t) lsel > ctx->xps->len-1)
         lsel = ctx->xps->len-1;
     RefreshExpenses(0, lsel);
@@ -524,22 +549,22 @@ void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
     dlg.ShowModal();
 
     ctx_refresh_categories(ctx);
-    ctx_refresh_expenses(ctx, 0, 0, 0);
+    ctx_refresh_expenses(ctx);
     RefreshExpenses(0, lsel);
 }
 
-void MyFrame::OnPrevMonth(wxCommandEvent& event) {
+void MyFrame::OnPrevious(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    ctx_set_date_prev_month(ctx);
-    ctx_refresh_expenses(ctx, 0, 0, 0);
+    ctx_set_date_previous(ctx);
+    ctx_refresh_expenses(ctx);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
 }
-void MyFrame::OnNextMonth(wxCommandEvent& event) {
+void MyFrame::OnNext(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    ctx_set_date_next_month(ctx);
-    ctx_refresh_expenses(ctx, 0, 0, 0);
+    ctx_set_date_next(ctx);
+    ctx_refresh_expenses(ctx);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
@@ -615,7 +640,8 @@ void MyFrame::OnNavYear(wxSpinEvent& event) {
     ExpenseContext *ctx = getContext();
     int year = event.GetPosition();
 
-    ctx_refresh_expenses(ctx, year, 0, 0);
+    ctx_set_date(ctx, year, 0, 0);
+    ctx_refresh_expenses(ctx);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
@@ -624,7 +650,8 @@ void MyFrame::OnNavMonth(wxListEvent& event) {
     ExpenseContext *ctx = getContext();
     int month = event.GetIndex()+1;
 
-    ctx_refresh_expenses(ctx, 0, month, 0);
+    ctx_set_date(ctx, 0, month, 0);
+    ctx_refresh_expenses(ctx);
     RefreshMenu();
     RefreshExpenses(0, 0);
 }

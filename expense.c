@@ -76,7 +76,7 @@ int ctx_create_expense_file(ExpenseContext *ctx, const char *filename) {
     str_assign(ctx->expfile, filename);
 
     ctx_refresh_categories(ctx);
-    ctx_refresh_expenses(ctx, 0, 0, 0);
+    ctx_refresh_expenses(ctx);
 
     return 0;
 }
@@ -94,7 +94,7 @@ int ctx_open_expense_file(ExpenseContext *ctx, const char *filename) {
     str_assign(ctx->expfile, filename);
 
     ctx_refresh_categories(ctx);
-    ctx_refresh_expenses(ctx, 0, 0, 0);
+    ctx_refresh_expenses(ctx);
 
     return 0;
 }
@@ -145,24 +145,20 @@ void ctx_set_date(ExpenseContext *ctx, int year, int month, int day) {
     if (day >= 1 && day <= 31)
         ctx->day = day;
 }
-void ctx_set_date_prev_month(ExpenseContext *ctx) {
+void ctx_set_date_previous(ExpenseContext *ctx) {
     date_t dt = date_from_cal(ctx->year, ctx->month, ctx->day);
-    dt = date_prev_month(dt);
+    if (ctx->viewtype == EXPENSE_VIEW_MONTH)
+        dt = date_prev_month(dt);
+    else if (ctx->viewtype == EXPENSE_VIEW_DAY)
+        dt = date_prev_day(dt);
     date_to_cal(dt, &ctx->year, &ctx->month, &ctx->day);
 }
-void ctx_set_date_next_month(ExpenseContext *ctx) {
+void ctx_set_date_next(ExpenseContext *ctx) {
     date_t dt = date_from_cal(ctx->year, ctx->month, ctx->day);
-    dt = date_next_month(dt);
-    date_to_cal(dt, &ctx->year, &ctx->month, &ctx->day);
-}
-void ctx_set_date_prev_day(ExpenseContext *ctx) {
-    date_t dt = date_from_cal(ctx->year, ctx->month, ctx->day);
-    dt = date_prev_day(dt);
-    date_to_cal(dt, &ctx->year, &ctx->month, &ctx->day);
-}
-void ctx_set_date_next_day(ExpenseContext *ctx) {
-    date_t dt = date_from_cal(ctx->year, ctx->month, ctx->day);
-    dt = date_next_day(dt);
+    if (ctx->viewtype == EXPENSE_VIEW_MONTH)
+        dt = date_next_month(dt);
+    else if (ctx->viewtype == EXPENSE_VIEW_DAY)
+        dt = date_next_day(dt);
     date_to_cal(dt, &ctx->year, &ctx->month, &ctx->day);
 }
 
@@ -170,37 +166,18 @@ int ctx_refresh_categories(ExpenseContext *ctx) {
     return db_select_cat(ctx->expfiledb, ctx->cats);
 }
 
-// Updates the current year, month, day and queries expenses according to date range.
-// To leave the year/month/day unchanged, pass 0 to the year/month/day arg.
-//
-// Ex.
-//   ctx_refresh_expenses(ctx, 0, 3, 0)    // set month to March
-//   ctx_refresh_expenses(ctx, 2023, 0, 0) // set year to 2023
-//   ctx_refresh_expenses(ctx, 2023, 3, 0) // set year/month to 2023 March
-//
-int ctx_refresh_expenses(ExpenseContext *ctx, int year, int month, int day) {
+int ctx_refresh_expenses(ExpenseContext *ctx) {
     date_t startdate;
     date_t enddate;
 
     if (!ctx_is_open_expfile(ctx))
         return 1;
 
-    if (year < 1900)
-        year = ctx->year;
-    if (month < 1 || month > 12)
-        month = ctx->month;
-    if (day < 1 || day > 31)
-        day = ctx->day;
-
-    ctx->year = year;
-    ctx->month = month;
-    ctx->day = day;
-
     if (ctx->viewtype == EXPENSE_VIEW_MONTH) {
-        startdate = date_from_cal(year, month, 1);
+        startdate = date_from_cal(ctx->year, ctx->month, 1);
         enddate = date_next_month(startdate);
     } else if (ctx->viewtype == EXPENSE_VIEW_DAY) {
-        startdate = date_from_cal(year, month, day);
+        startdate = date_from_cal(ctx->year, ctx->month, ctx->day);
         enddate = date_next_day(startdate);
     }
     return db_select_exp(ctx->expfiledb, startdate, enddate, ctx->xps);

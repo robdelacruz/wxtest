@@ -13,7 +13,7 @@ public:
 
     void CreateMenuBar();
     void CreateControls();
-    wxWindow *CreateExpensesNav(wxWindow *parent);
+    wxWindow *CreateNav(wxWindow *parent);
     wxWindow *CreateExpensesView(wxWindow *parent);
     wxWindow *CreateExpensesList(wxWindow *parent);
     wxWindow *CreateExpensePropGrid(wxWindow *parent);
@@ -38,8 +38,8 @@ public:
     void OnExpenseDel(wxCommandEvent& event);
     void OnExpenseCategories(wxCommandEvent& event);
 
-    void OnPrevMonth(wxCommandEvent& event);
-    void OnNextMonth(wxCommandEvent& event);
+    void OnPrevious(wxCommandEvent& event);
+    void OnNext(wxCommandEvent& event);
     void OnListItemSelected(wxListEvent& event);
     void OnListItemDeselected(wxListEvent& event);
     void OnListItemActivated(wxListEvent& event);
