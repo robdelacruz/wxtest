@@ -34,7 +34,6 @@ ExpenseContext *ctx_new() {
     ctx->expfiledb = NULL;
     ctx->xps = array_new(0);
     ctx->cats = array_new(0);
-    ctx->viewtype = EXPENSE_VIEW_MONTH;
     date_to_cal(date_today(), &ctx->year, &ctx->month, &ctx->day);
 
     return ctx;
@@ -140,25 +139,25 @@ int ctx_is_open_expfile(ExpenseContext *ctx) {
 void ctx_set_date(ExpenseContext *ctx, int year, int month, int day) {
     if (year >= 1900)
         ctx->year = year;
-    if (month >= 1 && month <= 12)
+    if (month >= 0 && month <= 12)
         ctx->month = month;
-    if (day >= 1 && day <= 31)
+    if (day >= 0 && day <= 31)
         ctx->day = day;
 }
-void ctx_set_date_previous(ExpenseContext *ctx) {
-    date_t dt = date_from_cal(ctx->year, ctx->month, ctx->day);
-    if (ctx->viewtype == EXPENSE_VIEW_MONTH)
-        dt = date_prev_month(dt);
-    else if (ctx->viewtype == EXPENSE_VIEW_DAY)
-        dt = date_prev_day(dt);
+void ctx_set_date_previous_month(ExpenseContext *ctx) {
+    if (ctx->month == 0)
+        ctx->month = 1;
+    date_t dt = date_from_cal(ctx->year, ctx->month, 1);
+    dt = date_prev_month(dt);
     date_to_cal(dt, &ctx->year, &ctx->month, &ctx->day);
 }
-void ctx_set_date_next(ExpenseContext *ctx) {
-    date_t dt = date_from_cal(ctx->year, ctx->month, ctx->day);
-    if (ctx->viewtype == EXPENSE_VIEW_MONTH)
-        dt = date_next_month(dt);
-    else if (ctx->viewtype == EXPENSE_VIEW_DAY)
-        dt = date_next_day(dt);
+void ctx_set_date_next_month(ExpenseContext *ctx) {
+    if (ctx->month == 0) {
+        ctx->month = 1;
+        return;
+    }
+    date_t dt = date_from_cal(ctx->year, ctx->month, 1);
+    dt = date_next_month(dt);
     date_to_cal(dt, &ctx->year, &ctx->month, &ctx->day);
 }
 
@@ -173,12 +172,14 @@ int ctx_refresh_expenses(ExpenseContext *ctx) {
     if (!ctx_is_open_expfile(ctx))
         return 1;
 
-    if (ctx->viewtype == EXPENSE_VIEW_MONTH) {
+    if (ctx->month == 0) {
+        // 1 year
+        startdate = date_from_cal(ctx->year, 1, 1);
+        enddate = date_from_cal(ctx->year+1, 1, 1);
+    } else {
+        // 1 month
         startdate = date_from_cal(ctx->year, ctx->month, 1);
         enddate = date_next_month(startdate);
-    } else if (ctx->viewtype == EXPENSE_VIEW_DAY) {
-        startdate = date_from_cal(ctx->year, ctx->month, ctx->day);
-        enddate = date_next_day(startdate);
     }
     return db_select_exp(ctx->expfiledb, startdate, enddate, ctx->xps);
 }

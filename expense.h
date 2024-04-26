@@ -9,15 +9,9 @@ extern "C" {
 #include "clib.h"
 #include "db.h"
 
-typedef enum {
-    EXPENSE_VIEW_MONTH = 0,
-    EXPENSE_VIEW_DAY
-} ExpenseViewType;
-
 typedef struct {
     str_t *expfile;
     sqlite3 *expfiledb;
-    ExpenseViewType viewtype;
     int year, month, day;
     array_t *xps;
     array_t *cats;
@@ -34,8 +28,8 @@ int ctx_open_expense_file(ExpenseContext *ctx, const char *filename);
 int ctx_init_from_args(ExpenseContext *ctx, int argc, char **argv);
 int ctx_is_open_expfile(ExpenseContext *ctx);
 void ctx_set_date(ExpenseContext *ctx, int year, int month, int day);
-void ctx_set_date_previous(ExpenseContext *ctx);
-void ctx_set_date_next(ExpenseContext *ctx);
+void ctx_set_date_previous_month(ExpenseContext *ctx);
+void ctx_set_date_next_month(ExpenseContext *ctx);
 
 int ctx_refresh_categories(ExpenseContext *ctx);
 int ctx_refresh_expenses(ExpenseContext *ctx);

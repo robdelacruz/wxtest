@@ -139,13 +139,16 @@ void MyFrame::CreateControls() {
     this->SetSizer(vbox);
 
 }
+
 wxWindow* MyFrame::CreateNav(wxWindow *parent) {
+    ExpenseContext *ctx = getContext();
     wxPanel *pnlMonths;
     wxSpinCtrl *spinYear;
     wxListView *lvMonths;
     wxListItem colAmount;
     wxBoxSizer *vboxMonths;
-    int month;
+    date_t dt;
+    char buf[20];
 
     pnlMonths = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize);
     //spinYear = new wxSpinCtrl(pnlMonths, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxSize(-1, BTN_HEIGHT), wxSP_ARROW_KEYS, 1900, 2100);
@@ -159,12 +162,13 @@ wxWindow* MyFrame::CreateNav(wxWindow *parent) {
     colAmount.SetAlign(wxLIST_FORMAT_RIGHT);
     lvMonths->SetColumn(1, colAmount);
 
-    // 'Entire Year' + 12 Months of the year in listview
-    lvMonths->InsertItem(0, "Entire Year");
-    month = wxDateTime::Jan;
-    for (int i=0; i < 12; i++) {
-        lvMonths->InsertItem(i+1, wxDateTime::GetMonthName((wxDateTime::Month)month, wxDateTime::Name_Full));
-        month++;
+    // 2024, January, February, ... December
+    dt = date_from_cal(ctx->year, 1, 1);
+    lvMonths->InsertItem(0, wxString::Format("%d", ctx->year));
+    for (int i=1; i <= 12; i++) {
+        date_strftime(dt, "%B", buf, sizeof(buf));
+        lvMonths->InsertItem(i, wxString::FromUTF8(buf));
+        dt = date_next_month(dt);
     }
 
     vboxMonths = new wxBoxSizer(wxVERTICAL);
@@ -191,7 +195,9 @@ wxWindow* MyFrame::CreateExpensesView(wxWindow *parent) {
 wxWindow* MyFrame::CreateExpensesList(wxWindow *parent) {
     wxPanel *pnl;
     wxListView *lv;
+    wxStaticText *stHeading;
     wxBitmapButton *btnPrev, *btnNext;
+    wxStaticText *lblFilter;
     wxTextCtrl *txtFilter;
     wxListItem colAmount;
     wxBoxSizer *vbox;
@@ -199,8 +205,11 @@ wxWindow* MyFrame::CreateExpensesList(wxWindow *parent) {
 
     pnl = new wxPanel(parent, ID_EXPENSES_PANEL, wxDefaultPosition, wxSize(-1,200));
 
+    stHeading = new wxStaticText(pnl, ID_EXPENSES_HEADING, "");
     btnPrev = new wxBitmapButton(pnl, ID_EXPENSES_PREV, wxBitmap(back_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
     btnNext = new wxBitmapButton(pnl, ID_EXPENSES_NEXT, wxBitmap(forward_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
+    lblFilter = new wxStaticText(pnl, wxID_ANY, "Filter");
+    txtFilter = new wxTextCtrl(pnl, ID_EXPENSES_FILTERTEXT, wxT(""), wxDefaultPosition, wxSize(300, BTN_HEIGHT));
 
     lv = new wxListView(pnl, ID_EXPENSES_LIST);
     lv->AppendColumn("Date");
@@ -220,14 +229,13 @@ wxWindow* MyFrame::CreateExpensesList(wxWindow *parent) {
     hbox = new wxBoxSizer(wxHORIZONTAL);
     hbox->Add(btnPrev, 0, wxALIGN_CENTER, 0);
     hbox->AddSpacer(5);
-    hbox->Add(new wxStaticText(pnl, ID_EXPENSES_HEADING, ""), 0, wxALIGN_CENTER, 0);
+    hbox->Add(stHeading, 0, wxALIGN_CENTER, 0);
     hbox->AddSpacer(5);
     hbox->Add(btnNext, 0, wxALIGN_CENTER, 0);
-    hbox->AddStretchSpacer();
-    hbox->Add(new wxStaticText(pnl, wxID_ANY, "Filter:"), 0, wxALIGN_CENTER, 0);
     hbox->AddSpacer(5);
-    txtFilter = new wxTextCtrl(pnl, ID_EXPENSES_FILTERTEXT, wxT(""), wxDefaultPosition, wxSize(300, BTN_HEIGHT));
-    hbox->Add(txtFilter, 0, wxALIGN_CENTER, 0);
+    hbox->Add(lblFilter, 0, wxALIGN_CENTER, 0);
+    hbox->AddSpacer(2);
+    hbox->Add(txtFilter, 1, wxEXPAND, 0);
 
     vbox = new wxBoxSizer(wxVERTICAL);
     vbox->Add(hbox, 0, wxEXPAND, 0);
@@ -316,9 +324,14 @@ void MyFrame::RefreshNav() {
     spinYear->SetValue(ctx->year);
     lvMonths->Select(ctx->month);
 
+    ctx_expenses_subtotal_year(ctx, ctx->year, &sumamt);
+    snprintf(buf, sizeof(buf), "%'9.2f", sumamt);
+    lvMonths->SetItem(0, 1, buf);
+
+    lvMonths->SetItem(0, 0, wxString::Format("%d", ctx->year));
     for (int i=1; i <= 12; i++) {
-        ctx_expenses_subtotal_month(ctx, ctx->year, i+1, &sumamt);
-        snprintf(buf, sizeof(buf), "%9.2f", sumamt);
+        ctx_expenses_subtotal_month(ctx, ctx->year, i, &sumamt);
+        snprintf(buf, sizeof(buf), "%'9.2f", sumamt);
         lvMonths->SetItem(i, 1, buf);
     }
 }
@@ -549,7 +562,7 @@ void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
 
 void MyFrame::OnPrevious(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    ctx_set_date_previous(ctx);
+    ctx_set_date_previous_month(ctx);
     ctx_refresh_expenses(ctx);
     RefreshMenu();
     RefreshNav();
@@ -557,7 +570,7 @@ void MyFrame::OnPrevious(wxCommandEvent& event) {
 }
 void MyFrame::OnNext(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    ctx_set_date_next(ctx);
+    ctx_set_date_next_month(ctx);
     ctx_refresh_expenses(ctx);
     RefreshMenu();
     RefreshNav();
