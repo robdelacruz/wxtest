@@ -17,12 +17,12 @@ public:
     wxWindow *CreateExpensesView(wxWindow *parent);
     wxWindow *CreateExpensesList(wxWindow *parent);
     wxWindow *CreateExpensePropGrid(wxWindow *parent);
-    void ShowControls();
+    void RefreshFrame();
 
     void RefreshMenu();
     void RefreshNav();
     void RefreshExpenses(uint64_t sel_expid, long sel_row);
-    void RefreshExpenseList(uint64_t sel_expid, long sel_row);
+    void RefreshExpensesList(uint64_t sel_expid, long sel_row);
     void RefreshSingleExpenseInList(exp_t *xp);
     void RefreshExpenseGrid(exp_t *xp);
 
