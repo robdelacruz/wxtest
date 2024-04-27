@@ -30,8 +30,9 @@ typedef struct {
 
 typedef struct {
     int year;
+    int month;
     double total;
-} yeartotal_t;
+} subtotal_t;
 
 cat_t *cat_new();
 void cat_free(cat_t *cat);
@@ -57,9 +58,13 @@ int db_del_cat(sqlite3 *db, uint64_t catid);
 
 int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps);
 int db_find_exp_by_id(sqlite3 *db, uint64_t expid, exp_t *xp);
-int db_sum_amount_exp(sqlite3 *db, date_t min_date, date_t max_date, double *sum);
+int db_subtotal_exp(sqlite3 *db, date_t min_date, date_t max_date, double *total);
+int db_subtotal_exp_year_month(sqlite3 *db, int year, int month, double *total);
+
 int db_count_exp_with_catid(sqlite3 *db, uint64_t catid, long *count);
-int db_get_yeartotals(sqlite3 *db, array_t *yeartotals);
+int db_get_exp_years(sqlite3 *db, int *pyears, size_t size_years, int *ret_nyears);
+int db_get_exp_highest_year(sqlite3 *db, int *ret_year);
+int db_get_exp_lowest_year(sqlite3 *db, int *ret_year);
 
 int db_add_exp(sqlite3 *db, exp_t *xp);
 int db_edit_exp(sqlite3 *db, exp_t *xp);

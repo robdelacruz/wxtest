@@ -34,7 +34,7 @@ ExpenseContext *ctx_new() {
     ctx->expfiledb = NULL;
     ctx->xps = array_new(0);
     ctx->cats = array_new(0);
-    ctx->yeartotals = array_new(0);
+    ctx->subtotals = array_new(0);
     date_to_cal(date_today(), &ctx->year, &ctx->month, &ctx->day);
 
     return ctx;
@@ -42,9 +42,17 @@ ExpenseContext *ctx_new() {
 void ctx_free(ExpenseContext *ctx) {
     ctx_close(ctx);
     str_free(ctx->expfile);
+
+    for (int i=0; i < ctx->xps->len; i++)
+        exp_free(ctx->xps->items[i]);
+    for (int i=0; i < ctx->cats->len; i++)
+        cat_free(ctx->cats->items[i]);
+    for (size_t i=0; i < ctx->subtotals->len; i++)
+        free(ctx->subtotals->items[i]);
     array_free(ctx->xps);
     array_free(ctx->cats);
-    array_free(ctx->yeartotals);
+    array_free(ctx->subtotals);
+
     free(ctx);
 }
 void ctx_close(ExpenseContext *ctx) {
@@ -60,8 +68,11 @@ void ctx_close(ExpenseContext *ctx) {
         exp_free(ctx->xps->items[i]);
     for (int i=0; i < ctx->cats->len; i++)
         cat_free(ctx->cats->items[i]);
+    for (size_t i=0; i < ctx->subtotals->len; i++)
+        free(ctx->subtotals->items[i]);
     array_clear(ctx->xps);
     array_clear(ctx->cats);
+    array_clear(ctx->subtotals);
 }
 
 int ctx_create_expense_file(ExpenseContext *ctx, const char *filename) {
@@ -78,6 +89,7 @@ int ctx_create_expense_file(ExpenseContext *ctx, const char *filename) {
 
     ctx_refresh_categories(ctx);
     ctx_refresh_expenses(ctx);
+    ctx_refresh_subtotals(ctx);
 
     return 0;
 }
@@ -96,6 +108,7 @@ int ctx_open_expense_file(ExpenseContext *ctx, const char *filename) {
 
     ctx_refresh_categories(ctx);
     ctx_refresh_expenses(ctx);
+    ctx_refresh_subtotals(ctx);
 
     return 0;
 }
@@ -195,7 +208,7 @@ int ctx_expenses_subtotal_year(ExpenseContext *ctx, int year, double *sum) {
 
     startdate = date_from_cal(year, 1, 1);
     enddate = date_from_cal(year+1, 1, 1);
-    return db_sum_amount_exp(ctx->expfiledb, startdate, enddate, sum);
+    return db_subtotal_exp(ctx->expfiledb, startdate, enddate, sum);
 }
 int ctx_expenses_subtotal_month(ExpenseContext *ctx, int year, int month, double *sum) {
     date_t startdate, enddate;
@@ -206,7 +219,7 @@ int ctx_expenses_subtotal_month(ExpenseContext *ctx, int year, int month, double
 
     startdate = date_from_cal(year, month, 1);
     enddate = date_next_month(startdate);
-    return db_sum_amount_exp(ctx->expfiledb, startdate, enddate, sum);
+    return db_subtotal_exp(ctx->expfiledb, startdate, enddate, sum);
 }
 int ctx_expenses_subtotal_day(ExpenseContext *ctx, int year, int month, int day, double *sum) {
     date_t startdate, enddate;
@@ -217,11 +230,88 @@ int ctx_expenses_subtotal_day(ExpenseContext *ctx, int year, int month, int day,
 
     startdate = date_from_cal(year, month, day);
     enddate = date_next_day(startdate);
-    return db_sum_amount_exp(ctx->expfiledb, startdate, enddate, sum);
+    return db_subtotal_exp(ctx->expfiledb, startdate, enddate, sum);
 }
 
-int ctx_refresh_yeartotals(ExpenseContext *ctx) {
-    return db_get_yeartotals(ctx->expfiledb, ctx->yeartotals);
+int ctx_refresh_subtotals(ExpenseContext *ctx) {
+    int high_year, low_year;
+    subtotal_t *st;
+    double total;
+    int z;
+    sqlite3 *db = ctx->expfiledb;
+
+    for (size_t i=0; i < ctx->subtotals->len; i++)
+        free(ctx->subtotals->items[i]);
+    array_clear(ctx->subtotals);
+
+    z = db_get_exp_highest_year(db, &high_year);
+    if (z != 0)
+        return z;
+    z = db_get_exp_lowest_year(db, &low_year);
+    if (z != 0)
+        return z;
+
+    for (int year=high_year; year >= low_year; year--) {
+        // Year + 12 months subtotals
+        for (int i=0; i <= 12; i++) {
+            z = db_subtotal_exp_year_month(db, year, i, &total);
+            if (z != 0)
+                return z;
+            st = (subtotal_t *) malloc(sizeof(subtotal_t));
+            st->year = year;
+            st->month = i;
+            st->total = total;
+            array_add(ctx->subtotals, st);
+        }
+    }
+
+    return 0;
+}
+
+int ctx_refresh_subtotals_year_month(ExpenseContext *ctx, int year, int month) {
+    int z;
+    int istart=-1;
+    subtotal_t *st;
+    double total;
+
+    assert(month >= 0 && month <= 12);
+
+    for (size_t i=0; i < ctx->subtotals->len; i++) {
+        st = (subtotal_t *)ctx->subtotals->items[i];
+        if (st->year == year && st->month == 0) {
+            istart = i;
+            break;
+        }
+    }
+    if (istart == -1) {
+        ctx_refresh_subtotals(ctx);
+        return 0;
+    }
+    assert(istart+12 < ctx->subtotals->len);
+    if (istart+12 >= ctx->subtotals->len) {
+        ctx_refresh_subtotals(ctx);
+        return 0;
+    }
+
+    // Update year subtotal
+    z = db_subtotal_exp_year_month(ctx->expfiledb, year, 0, &total);
+    if (z != 0)
+        return z;
+    st = (subtotal_t *)ctx->subtotals->items[istart];
+    st->year = year;
+    st->month = 0;
+    st->total = total;
+
+    // Update month subtotal
+    z = db_subtotal_exp_year_month(ctx->expfiledb, year, month, &total);
+    if (z != 0)
+        return z;
+    st = (subtotal_t *)ctx->subtotals->items[istart+month];
+    st->year = year;
+    st->month = 0;
+    st->total = total;
+
+    return 0;
 }
 
 int ctx_delete_category(ExpenseContext *ctx, uint64_t catid) {

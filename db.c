@@ -262,7 +262,10 @@ int db_select_cat(sqlite3 *db, array_t *cats) {
         return z;
     }
 
+    for (size_t i=0; i < cats->len; i++)
+        cat_free((cat_t *)cats->items[i]);
     array_clear(cats);
+
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
         cat = cat_new();
         cat->catid = sqlite3_column_int64(stmt, 0);
@@ -368,7 +371,10 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps) {
     z = sqlite3_bind_int(stmt, 2, max_date);
     assert(z == 0);
 
+    for (size_t i=0; i < xps->len; i++)
+        exp_free((exp_t *)xps->items[i]);
     array_clear(xps);
+
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
         xp = exp_new();
         xp->expid = sqlite3_column_int64(stmt, 0);
@@ -421,7 +427,7 @@ int db_find_exp_by_id(sqlite3 *db, uint64_t expid, exp_t *xp) {
     sqlite3_finalize(stmt);
     return 0;
 }
-int db_sum_amount_exp(sqlite3 *db, date_t min_date, date_t max_date, double *sum) {
+int db_subtotal_exp(sqlite3 *db, date_t min_date, date_t max_date, double *sum) {
     sqlite3_stmt *stmt;
     const char *s;
     int z;
@@ -453,6 +459,24 @@ int db_sum_amount_exp(sqlite3 *db, date_t min_date, date_t max_date, double *sum
     sqlite3_finalize(stmt);
     return 0;
 }
+// Pass month=0 to get subtotal for entire year
+int db_subtotal_exp_year_month(sqlite3 *db, int year, int month, double *total) {
+    date_t startdt, enddt;
+
+    assert(month >= 0 && month <= 12);
+
+    if (month == 0) {
+        startdt = date_from_cal(year, 1, 1);
+        enddt = date_from_cal(year+1, 1, 1);
+    } else {
+        startdt = date_from_cal(year, month, 1);
+        enddt = date_next_month(startdt);
+    }
+
+    *total = 0;
+    return db_subtotal_exp(db, startdt, enddt, total);
+}
+
 int db_count_exp_with_catid(sqlite3 *db, uint64_t catid, long *count) {
     sqlite3_stmt *stmt;
     const char *s;
@@ -484,17 +508,16 @@ int db_count_exp_with_catid(sqlite3 *db, uint64_t catid, long *count) {
     return 0;
 }
 
-int db_get_yeartotals(sqlite3 *db, array_t *yeartotals) {
+int db_get_exp_years(sqlite3 *db, int *pyears, size_t size_years, int *ret_nyears) {
     sqlite3_stmt *stmt;
     const char *s;
-    int z;
-    int years[250];
     int nyears=0;
     int highestyear = 10000;
     date_t row_dt;
     int row_year;
+    int z;
 
-    array_clear(yeartotals);
+    *ret_nyears = 0;
 
     s = "SELECT date FROM exp ORDER BY date DESC";
     z = prepare_sql(db, s, &stmt);
@@ -505,32 +528,105 @@ int db_get_yeartotals(sqlite3 *db, array_t *yeartotals) {
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
         row_dt = sqlite3_column_int(stmt, 0);
         date_to_cal(row_dt, &row_year, NULL, NULL);
-        if (row_year < highestyear) {
-            years[nyears] = row_year;
-            nyears++;
-            highestyear = row_year;
+        if (row_year >= highestyear)
+            continue;
 
-            if (nyears >= countof(years))
-                break;
-        }
+        highestyear = row_year;
+        *pyears = row_year;
+        pyears++;
+        nyears++;
+        if (nyears >= size_years)
+            break;
     }
-    if (nyears < countof(years) && z != SQLITE_DONE) {
+    if (nyears < size_years && z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
         return z;
     }
     sqlite3_finalize(stmt);
 
+    *ret_nyears = nyears;
+    return 0;
+}
+int db_get_exp_highest_year(sqlite3 *db, int *ret_year) {
+    sqlite3_stmt *stmt;
+    const char *s;
+    date_t row_dt;
+    int row_year;
+    int z;
+
+    *ret_year = 0;
+
+    s = "SELECT IFNULL(MAX(date), 0) FROM exp";
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    z = sqlite3_step(stmt);
+    if (z != SQLITE_ROW) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    row_dt = sqlite3_column_int(stmt, 0);
+    date_to_cal(row_dt, &row_year, NULL, NULL);
+    *ret_year = row_year;
+
+    sqlite3_finalize(stmt);
+    return 0;
+}
+int db_get_exp_lowest_year(sqlite3 *db, int *ret_year) {
+    sqlite3_stmt *stmt;
+    const char *s;
+    date_t row_dt;
+    int row_year;
+    int z;
+
+    *ret_year = 0;
+
+    s = "SELECT IFNULL(MIN(date), 0) FROM exp";
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    z = sqlite3_step(stmt);
+    if (z != SQLITE_ROW) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    row_dt = sqlite3_column_int(stmt, 0);
+    date_to_cal(row_dt, &row_year, NULL, NULL);
+    *ret_year = row_year;
+
+    sqlite3_finalize(stmt);
+    return 0;
+}
+
+int db_get_subtotals(sqlite3 *db, array_t *subtotals) {
+    sqlite3_stmt *stmt;
+    const char *s;
+    int z;
+    int years[250];
+    int nyears=0;
+
+    for (size_t i=0; i < subtotals->len; i++)
+        free(subtotals->items[i]);
+    array_clear(subtotals);
+
+    db_get_exp_years(db, years, countof(years), &nyears);
+
     for (int i=0; i < nyears; i++) {
         int year = years[i];
-        yeartotal_t *yt = (yeartotal_t *) malloc(sizeof(yeartotal_t));
+        subtotal_t *st = (subtotal_t *) malloc(sizeof(subtotal_t));
         date_t startdt = date_from_cal(year, 1, 1);
         date_t enddt = date_from_cal(year+1, 1, 1);
 
-        yt->year = year;
-        z = db_sum_amount_exp(db, startdt, enddt, &yt->total);
+        st->year = year;
+        st->month = 0;
+        z = db_subtotal_exp(db, startdt, enddt, &st->total);
         if (z != 0)
             return z;
-        array_add(yeartotals, yt);
+        array_add(subtotals, st);
     }
     return 0;
 }

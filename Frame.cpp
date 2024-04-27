@@ -356,41 +356,84 @@ void MyFrame::RefreshMenu() {
 void MyFrame::RefreshNav() {
     ExpenseContext *ctx = getContext();
     wxNotebook *nb = (wxNotebook *) wxWindow::FindWindowById(ID_NAV_NOTEBOOK);
-    double sumamt;
     char buf[24];
+
+    // ctx->subtotals array holds subtotals for all years and months in date desc order
+    // It contains all years from highest to lowest that have expenses.
+    //
+    // st.year: 2020, st.month: 0  st.total contains amt subtotal for entire 2020
+    // st.year: 2020, st.month: 1  st.total contains amt subtotal for 2020 January
+    // st.year: 2020, st.month: 2  st.total contains amt subtotal for 2020 February
+    // st.year: 2020, st.month: 12 st.total contains amt subtotal for 2020 December
+    //
+    // If the year/month has no expenses, subtotal will be 0.
+    // Ex. if there are no expenses for 2019, but there are expenses for 2018,
+    // then the entire year/month records for 2019/month will be zero.
 
     if (nb->GetSelection() == 0) {
         // Refresh monthly nav
         wxTextCtrl *txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
         wxListView *lvMonths = (wxListView *) wxWindow::FindWindowById(ID_NAV_MONTHSLIST);
+        int istart = -1;
 
         txtYear->ChangeValue(wxString::Format("%d", ctx->year));
         lvMonths->Select(ctx->month);
 
-        ctx_expenses_subtotal_year(ctx, ctx->year, &sumamt);
-        snprintf(buf, sizeof(buf), "%'9.2f", sumamt);
-        lvMonths->SetItem(0, 1, buf);
+        for (size_t i=0; i < ctx->subtotals->len; i++) {
+            // Find subtotal for ctx->year
+            subtotal_t *st = (subtotal_t *) ctx->subtotals->items[i];
+            if (st->year == ctx->year) {
+                assert(st->month == 0);  // Year subtotal should always appear first
+                istart = i;              // subtotal records for ctx->year starts at istart
+                break;
+            }
+        }
+        if (istart == -1) {
+            lvMonths->SetItem(0, 0, wxString::Format("%d", ctx->year));
+            snprintf(buf, sizeof(buf), "%'9.2f", 0.0);
+            for (int i=0; i <= 12; i++)
+                lvMonths->SetItem(i, 1, buf);
+        } else {
+            // There should always be 13 records available from istart.
+            assert((size_t)istart+12 < ctx->subtotals->len);
 
-        lvMonths->SetItem(0, 0, wxString::Format("%d", ctx->year));
-        for (int i=1; i <= 12; i++) {
-            ctx_expenses_subtotal_month(ctx, ctx->year, i, &sumamt);
-            snprintf(buf, sizeof(buf), "%'9.2f", sumamt);
-            lvMonths->SetItem(i, 1, buf);
+            lvMonths->SetItem(0, 0, wxString::Format("%d", ctx->year));
+
+            // There should be 13 records from istart index without gaps.
+            // index 0: subtotal for entire year
+            // indexes 1-12: subtotals for Jan-Dec
+            for (int i=0; i <= 12; i++) {
+                subtotal_t *st;
+
+                if (istart+i >= (int)ctx->subtotals->len)
+                    break;
+                st = (subtotal_t *) ctx->subtotals->items[istart+i];
+                assert(i == st->month);
+
+                snprintf(buf, sizeof(buf), "%'9.2f", st->total);
+                lvMonths->SetItem(i, 1, buf);
+            }
         }
     } else {
         // Refresh yearly nav
+        int nitem;
         wxListView *lvYears = (wxListView *) wxWindow::FindWindowById(ID_NAV_YEARSLIST);
-
-        ctx_refresh_yeartotals(ctx);
         lvYears->DeleteAllItems();
-        for (size_t i=0; i < ctx->yeartotals->len; i++) {
-            yeartotal_t *yt = (yeartotal_t *) ctx->yeartotals->items[i];
-            lvYears->InsertItem(i, wxString::Format("%d", yt->year));
-            snprintf(buf, sizeof(buf), "%'9.2f", yt->total);
-            lvYears->SetItem(i, 1, buf);
 
-            if (yt->year == ctx->year)
-                lvYears->Select(i);
+        nitem = 0;
+        for (size_t i=0; i < ctx->subtotals->len; i++) {
+            subtotal_t *st = (subtotal_t *) ctx->subtotals->items[i];
+            if (st->month != 0)
+                continue;
+
+            lvYears->InsertItem(nitem, wxString::Format("%d", st->year));
+            snprintf(buf, sizeof(buf), "%'9.2f", st->total);
+            lvYears->SetItem(nitem, 1, buf);
+            lvYears->SetItemData(nitem, st->year);
+
+            if (st->year == ctx->year)
+                lvYears->Select(nitem);
+            nitem++;
         }
     }
 }
@@ -497,6 +540,7 @@ void MyFrame::EditExpense(exp_t *xp) {
         date_to_cal(xp->date, &xpyear, &xpmonth, &xpday);
         ctx_set_date(ctx, xpyear, xpmonth, xpday);
         ctx_refresh_expenses(ctx);
+        ctx_refresh_subtotals_year_month(ctx, xpyear, xpmonth);
 
         RefreshMenu();
         RefreshNav();
@@ -589,6 +633,7 @@ void MyFrame::OnExpenseEdit(wxCommandEvent& event) {
 }
 void MyFrame::OnExpenseDel(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
+    int xpyear, xpmonth;
     wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
     long lsel = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
     if (lsel == -1)
@@ -601,8 +646,11 @@ void MyFrame::OnExpenseDel(wxCommandEvent& event) {
     if (dlg.ShowModal() != wxID_YES)
         return;
     db_del_exp(ctx->expfiledb, xp->expid);
+    date_to_cal(xp->date, &xpyear, &xpmonth, NULL);
 
     ctx_refresh_expenses(ctx);
+    ctx_refresh_subtotals_year_month(ctx, xpyear, xpmonth);
+
     if ((size_t) lsel > ctx->xps->len-1)
         lsel = ctx->xps->len-1;
     RefreshExpenses(0, lsel);
@@ -617,6 +665,7 @@ void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
     SetupCategoriesDialog dlg(this);
     dlg.ShowModal();
 
+    ctx_refresh_subtotals(ctx);
     ctx_refresh_categories(ctx);
     ctx_refresh_expenses(ctx);
     RefreshExpenses(0, lsel);
@@ -782,14 +831,9 @@ void MyFrame::OnNavMonthSelected(wxListEvent& event) {
 }
 void MyFrame::OnNavYearSelected(wxListEvent& event) {
     ExpenseContext *ctx = getContext();
-    int isel = event.GetIndex();
-    yeartotal_t *yt;
+    int year = (int) event.GetItem().GetData();
 
-    if ((size_t) isel >= ctx->yeartotals->len)
-        return;
-    yt = (yeartotal_t *) ctx->yeartotals->items[isel];
-
-    ctx_set_date(ctx, yt->year, 0, 0);
+    ctx_set_date(ctx, year, 0, 0);
     ctx_refresh_expenses(ctx);
     RefreshMenu();
     RefreshExpenses(0, 0);
