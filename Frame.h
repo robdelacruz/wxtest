@@ -45,8 +45,10 @@ public:
     void OnListItemActivated(wxListEvent& event);
     void OnPropertyGridChanged(wxPropertyGridEvent& event);
 
-    void OnNavYear(wxSpinEvent& event);
-    void OnNavMonth(wxListEvent& event);
+    void OnNavYearChanged(wxCommandEvent& event);
+    void OnNavPrevYear(wxCommandEvent& event);
+    void OnNavNextYear(wxCommandEvent& event);
+    void OnNavListSelected(wxListEvent& event);
 
 private:
     exp_t *m_propgrid_xp;

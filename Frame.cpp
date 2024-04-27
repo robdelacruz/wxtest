@@ -9,6 +9,7 @@
 #include "wx/filename.h"
 #include "wx/propgrid/propgrid.h"
 #include "wx/propgrid/advprops.h"
+#include "wx/valnum.h"
 
 #include "art/home.xpm"
 #include "art/back.xpm"
@@ -33,8 +34,10 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(ID_EXPENSE_DEL, MyFrame::OnExpenseDel)
     EVT_MENU(ID_EXPENSE_CATEGORIES, MyFrame::OnExpenseCategories)
 
-    EVT_SPINCTRL(ID_NAV_YEAR_SPIN, MyFrame::OnNavYear)
-    EVT_LIST_ITEM_SELECTED(ID_NAV_MONTH_LIST, MyFrame::OnNavMonth)
+    EVT_TEXT(ID_NAV_YEAR, MyFrame::OnNavYearChanged)
+    EVT_BUTTON(ID_NAV_PREVYEAR, MyFrame::OnNavPrevYear)
+    EVT_BUTTON(ID_NAV_NEXTYEAR, MyFrame::OnNavNextYear)
+    EVT_LIST_ITEM_SELECTED(ID_NAV_LIST, MyFrame::OnNavListSelected)
 
     EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevious)
     EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNext)
@@ -127,7 +130,7 @@ void MyFrame::CreateControls() {
     nav = CreateNav(split);
     expview = CreateExpensesView(split);
     split->SplitVertically(nav, expview);
-    split->SetSashPosition(150);
+    split->SetSashPosition(155);
 
     vboxMain = new wxBoxSizer(wxVERTICAL);
     vboxMain->Add(split, 1, wxEXPAND, 0);
@@ -142,18 +145,25 @@ void MyFrame::CreateControls() {
 
 wxWindow* MyFrame::CreateNav(wxWindow *parent) {
     ExpenseContext *ctx = getContext();
-    wxPanel *pnlMonths;
-    wxSpinCtrl *spinYear;
+    wxPanel *pnl;
+//    wxStaticText *lblYear;
+    wxTextCtrl *txtYear;
+    wxIntegerValidator<int> vldYear(NULL, wxNUM_VAL_DEFAULT);
+    wxBitmapButton *btnPrevYear, *btnNextYear;
     wxListView *lvMonths;
     wxListItem colAmount;
+    wxBoxSizer *hbox;
     wxBoxSizer *vboxMonths;
     date_t dt;
     char buf[20];
 
-    pnlMonths = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-    //spinYear = new wxSpinCtrl(pnlMonths, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxSize(-1, BTN_HEIGHT), wxSP_ARROW_KEYS, 1900, 2100);
-    spinYear = new wxSpinCtrl(pnlMonths, ID_NAV_YEAR_SPIN, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1900, 2100);
-    lvMonths = new wxListView(pnlMonths, ID_NAV_MONTH_LIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
+    pnl = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+
+//    lblYear = new wxStaticText(pnl, wxID_ANY, "Display Year");
+    txtYear = new wxTextCtrl(pnl, ID_NAV_YEAR, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, vldYear);
+    btnPrevYear = new wxBitmapButton(pnl, ID_NAV_PREVYEAR, wxBitmap(back_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
+    btnNextYear = new wxBitmapButton(pnl, ID_NAV_NEXTYEAR, wxBitmap(forward_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
+    lvMonths = new wxListView(pnl, ID_NAV_LIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
     lvMonths->AppendColumn("Month");
     lvMonths->AppendColumn("Amount");
     lvMonths->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
@@ -171,13 +181,20 @@ wxWindow* MyFrame::CreateNav(wxWindow *parent) {
         dt = date_next_month(dt);
     }
 
+    hbox = new wxBoxSizer(wxHORIZONTAL);
+//    hbox->Add(lblYear, 0, wxEXPAND, 0);
+//    hbox->AddSpacer(5);
+    hbox->Add(btnPrevYear, 0, wxEXPAND, 0);
+    hbox->Add(txtYear, 0, wxEXPAND, 0);
+    hbox->Add(btnNextYear, 0, wxEXPAND, 0);
+
     vboxMonths = new wxBoxSizer(wxVERTICAL);
-    vboxMonths->Add(spinYear, 0, wxEXPAND, 0);
+    vboxMonths->Add(hbox, 0, wxEXPAND, 0);
     vboxMonths->AddSpacer(5);
     vboxMonths->Add(lvMonths, 1, wxEXPAND, 0);
-    pnlMonths->SetSizer(vboxMonths);
+    pnl->SetSizer(vboxMonths);
 
-    return pnlMonths;
+    return pnl;
 }
 wxWindow* MyFrame::CreateExpensesView(wxWindow *parent) {
     wxSplitterWindow *split;
@@ -316,23 +333,23 @@ void MyFrame::RefreshMenu() {
 }
 void MyFrame::RefreshNav() {
     ExpenseContext *ctx = getContext();
-    wxSpinCtrl *spinYear = (wxSpinCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR_SPIN);
-    wxListView *lvMonths = (wxListView *) wxWindow::FindWindowById(ID_NAV_MONTH_LIST);
+    wxTextCtrl *txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
+    wxListView *lvList = (wxListView *) wxWindow::FindWindowById(ID_NAV_LIST);
     double sumamt;
     char buf[24];
 
-    spinYear->SetValue(ctx->year);
-    lvMonths->Select(ctx->month);
+    txtYear->ChangeValue(wxString::Format("%d", ctx->year));
+    lvList->Select(ctx->month);
 
     ctx_expenses_subtotal_year(ctx, ctx->year, &sumamt);
     snprintf(buf, sizeof(buf), "%'9.2f", sumamt);
-    lvMonths->SetItem(0, 1, buf);
+    lvList->SetItem(0, 1, buf);
 
-    lvMonths->SetItem(0, 0, wxString::Format("%d", ctx->year));
+    lvList->SetItem(0, 0, wxString::Format("%d", ctx->year));
     for (int i=1; i <= 12; i++) {
         ctx_expenses_subtotal_month(ctx, ctx->year, i, &sumamt);
         snprintf(buf, sizeof(buf), "%'9.2f", sumamt);
-        lvMonths->SetItem(i, 1, buf);
+        lvList->SetItem(i, 1, buf);
     }
 }
 void MyFrame::RefreshExpenses(uint64_t sel_expid, long sel_row) {
@@ -355,7 +372,10 @@ void MyFrame::RefreshExpensesList(uint64_t sel_expid, long sel_row) {
     char buf[24];
 
     st = (wxStaticText *) wxWindow::FindWindowById(ID_EXPENSES_HEADING, this);
-    date_strftime(date_from_cal(ctx->year, ctx->month, 1), "%b %Y", buf, sizeof(buf));
+    if (ctx->month == 0)
+        date_strftime(date_from_cal(ctx->year, 1, 1), "%Y", buf, sizeof(buf));
+    else
+        date_strftime(date_from_cal(ctx->year, ctx->month, 1), "%b %Y", buf, sizeof(buf));
     st->SetLabel(wxString::FromUTF8(buf));
 
     lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
@@ -562,7 +582,11 @@ void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
 
 void MyFrame::OnPrevious(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    ctx_set_date_previous_month(ctx);
+    if (ctx->month == 0)
+        ctx->year--;
+    else
+        ctx_set_date_previous_month(ctx);
+
     ctx_refresh_expenses(ctx);
     RefreshMenu();
     RefreshNav();
@@ -570,7 +594,11 @@ void MyFrame::OnPrevious(wxCommandEvent& event) {
 }
 void MyFrame::OnNext(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    ctx_set_date_next_month(ctx);
+    if (ctx->month == 0)
+        ctx->year++;
+    else
+        ctx_set_date_next_month(ctx);
+
     ctx_refresh_expenses(ctx);
     RefreshMenu();
     RefreshNav();
@@ -643,9 +671,33 @@ void MyFrame::OnPropertyGridChanged(wxPropertyGridEvent& event) {
     RefreshSingleExpenseInList(xp);
 }
 
-void MyFrame::OnNavYear(wxSpinEvent& event) {
+static int GetNavYear() {
     ExpenseContext *ctx = getContext();
-    int year = event.GetPosition();
+    wxTextCtrl *txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
+    wxString strYear = txtYear->GetValue().Trim().Truncate(4);
+    int year;
+
+    if (strYear.Length() < 4)
+        return ctx->year;
+    if (!strYear.ToInt(&year))
+        return ctx->year;
+    if (year < 1970 || year > 2100)
+        return ctx->year;
+
+    if (year < 1970)
+        year = 1970;
+    if (year > 2100)
+        year = 2100;
+
+    return year;
+}
+
+void MyFrame::OnNavYearChanged(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
+    int year = GetNavYear();
+
+    if (year == ctx->year)
+        return;
 
     ctx_set_date(ctx, year, 0, 0);
     ctx_refresh_expenses(ctx);
@@ -653,7 +705,27 @@ void MyFrame::OnNavYear(wxSpinEvent& event) {
     RefreshNav();
     RefreshExpenses(0, 0);
 }
-void MyFrame::OnNavMonth(wxListEvent& event) {
+void MyFrame::OnNavPrevYear(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
+    int year = GetNavYear();
+
+    ctx_set_date(ctx, year-1, 0, 0);
+    ctx_refresh_expenses(ctx);
+    RefreshMenu();
+    RefreshNav();
+    RefreshExpenses(0, 0);
+}
+void MyFrame::OnNavNextYear(wxCommandEvent& event) {
+    ExpenseContext *ctx = getContext();
+    int year = GetNavYear();
+
+    ctx_set_date(ctx, year+1, 0, 0);
+    ctx_refresh_expenses(ctx);
+    RefreshMenu();
+    RefreshNav();
+    RefreshExpenses(0, 0);
+}
+void MyFrame::OnNavListSelected(wxListEvent& event) {
     ExpenseContext *ctx = getContext();
     int month = event.GetIndex();
 
