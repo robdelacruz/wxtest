@@ -3,6 +3,7 @@
 
 #include "wx/wx.h"
 #include "wx/listctrl.h"
+#include "wx/notebook.h"
 #include "wx/propgrid/propgrid.h"
 #include "db.h"
 
@@ -45,10 +46,12 @@ public:
     void OnListItemActivated(wxListEvent& event);
     void OnPropertyGridChanged(wxPropertyGridEvent& event);
 
+    void OnNavPageChanged(wxBookCtrlEvent& event);
     void OnNavYearChanged(wxCommandEvent& event);
     void OnNavPrevYear(wxCommandEvent& event);
     void OnNavNextYear(wxCommandEvent& event);
-    void OnNavListSelected(wxListEvent& event);
+    void OnNavMonthSelected(wxListEvent& event);
+    void OnNavYearSelected(wxListEvent& event);
 
 private:
     exp_t *m_propgrid_xp;

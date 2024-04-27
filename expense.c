@@ -34,6 +34,7 @@ ExpenseContext *ctx_new() {
     ctx->expfiledb = NULL;
     ctx->xps = array_new(0);
     ctx->cats = array_new(0);
+    ctx->yeartotals = array_new(0);
     date_to_cal(date_today(), &ctx->year, &ctx->month, &ctx->day);
 
     return ctx;
@@ -43,6 +44,7 @@ void ctx_free(ExpenseContext *ctx) {
     str_free(ctx->expfile);
     array_free(ctx->xps);
     array_free(ctx->cats);
+    array_free(ctx->yeartotals);
     free(ctx);
 }
 void ctx_close(ExpenseContext *ctx) {
@@ -216,6 +218,10 @@ int ctx_expenses_subtotal_day(ExpenseContext *ctx, int year, int month, int day,
     startdate = date_from_cal(year, month, day);
     enddate = date_next_day(startdate);
     return db_sum_amount_exp(ctx->expfiledb, startdate, enddate, sum);
+}
+
+int ctx_refresh_yeartotals(ExpenseContext *ctx) {
+    return db_get_yeartotals(ctx->expfiledb, ctx->yeartotals);
 }
 
 int ctx_delete_category(ExpenseContext *ctx, uint64_t catid) {

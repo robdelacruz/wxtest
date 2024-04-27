@@ -28,6 +28,11 @@ typedef struct {
     str_t *catname;
 } exp_t;
 
+typedef struct {
+    int year;
+    double total;
+} yeartotal_t;
+
 cat_t *cat_new();
 void cat_free(cat_t *cat);
 void cat_dup(cat_t *destcat, cat_t *srccat);
@@ -54,6 +59,7 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps);
 int db_find_exp_by_id(sqlite3 *db, uint64_t expid, exp_t *xp);
 int db_sum_amount_exp(sqlite3 *db, date_t min_date, date_t max_date, double *sum);
 int db_count_exp_with_catid(sqlite3 *db, uint64_t catid, long *count);
+int db_get_yeartotals(sqlite3 *db, array_t *yeartotals);
 
 int db_add_exp(sqlite3 *db, exp_t *xp);
 int db_edit_exp(sqlite3 *db, exp_t *xp);

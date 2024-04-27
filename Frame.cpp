@@ -5,7 +5,7 @@
 #include "wx/choice.h"
 #include "wx/listctrl.h"
 #include "wx/splitter.h"
-#include "wx/spinctrl.h"
+#include "wx/notebook.h"
 #include "wx/filename.h"
 #include "wx/propgrid/propgrid.h"
 #include "wx/propgrid/advprops.h"
@@ -34,10 +34,12 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(ID_EXPENSE_DEL, MyFrame::OnExpenseDel)
     EVT_MENU(ID_EXPENSE_CATEGORIES, MyFrame::OnExpenseCategories)
 
+    EVT_NOTEBOOK_PAGE_CHANGED(ID_NAV_NOTEBOOK, MyFrame::OnNavPageChanged)
     EVT_TEXT(ID_NAV_YEAR, MyFrame::OnNavYearChanged)
     EVT_BUTTON(ID_NAV_PREVYEAR, MyFrame::OnNavPrevYear)
     EVT_BUTTON(ID_NAV_NEXTYEAR, MyFrame::OnNavNextYear)
-    EVT_LIST_ITEM_SELECTED(ID_NAV_LIST, MyFrame::OnNavListSelected)
+    EVT_LIST_ITEM_SELECTED(ID_NAV_MONTHSLIST, MyFrame::OnNavMonthSelected)
+    EVT_LIST_ITEM_SELECTED(ID_NAV_YEARSLIST, MyFrame::OnNavYearSelected)
 
     EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnPrevious)
     EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnNext)
@@ -141,29 +143,44 @@ void MyFrame::CreateControls() {
     vbox->Add(pnlMain, 1, wxEXPAND, 0);
     this->SetSizer(vbox);
 
+    wxWindow::FindWindowById(ID_EXPENSES_LIST)->SetFocus();
 }
 
 wxWindow* MyFrame::CreateNav(wxWindow *parent) {
     ExpenseContext *ctx = getContext();
-    wxPanel *pnl;
-//    wxStaticText *lblYear;
+    wxNotebook *nb;
+    wxPanel *pnl1, *pnl2;
     wxTextCtrl *txtYear;
     wxIntegerValidator<int> vldYear(NULL, wxNUM_VAL_DEFAULT);
     wxBitmapButton *btnPrevYear, *btnNextYear;
     wxListView *lvMonths;
+    wxListView *lvYears;
     wxListItem colAmount;
     wxBoxSizer *hbox;
-    wxBoxSizer *vboxMonths;
+    wxBoxSizer *vbox;
     date_t dt;
     char buf[20];
 
-    pnl = new wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    nb = new wxNotebook(parent, ID_NAV_NOTEBOOK, wxDefaultPosition, wxDefaultSize, wxNB_TOP);
 
-//    lblYear = new wxStaticText(pnl, wxID_ANY, "Display Year");
-    txtYear = new wxTextCtrl(pnl, ID_NAV_YEAR, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, vldYear);
-    btnPrevYear = new wxBitmapButton(pnl, ID_NAV_PREVYEAR, wxBitmap(back_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
-    btnNextYear = new wxBitmapButton(pnl, ID_NAV_NEXTYEAR, wxBitmap(forward_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
-    lvMonths = new wxListView(pnl, ID_NAV_LIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
+    pnl1 = new wxPanel(nb, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    pnl2 = new wxPanel(nb, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+
+    // pnl2: All years listview
+    lvYears = new wxListView(pnl2, ID_NAV_YEARSLIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
+    lvYears->AppendColumn("Year");
+    lvYears->AppendColumn("Amount");
+    lvYears->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
+    lvYears->SetColumnWidth(1, wxLIST_AUTOSIZE_USEHEADER);
+    lvYears->GetColumn(1, colAmount);
+    colAmount.SetAlign(wxLIST_FORMAT_RIGHT);
+    lvYears->SetColumn(1, colAmount);
+
+    // pnl1: Year selector with 12 months listview
+    txtYear = new wxTextCtrl(pnl1, ID_NAV_YEAR, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, vldYear);
+    btnPrevYear = new wxBitmapButton(pnl1, ID_NAV_PREVYEAR, wxBitmap(back_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
+    btnNextYear = new wxBitmapButton(pnl1, ID_NAV_NEXTYEAR, wxBitmap(forward_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
+    lvMonths = new wxListView(pnl1, ID_NAV_MONTHSLIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
     lvMonths->AppendColumn("Month");
     lvMonths->AppendColumn("Amount");
     lvMonths->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
@@ -182,19 +199,24 @@ wxWindow* MyFrame::CreateNav(wxWindow *parent) {
     }
 
     hbox = new wxBoxSizer(wxHORIZONTAL);
-//    hbox->Add(lblYear, 0, wxEXPAND, 0);
-//    hbox->AddSpacer(5);
     hbox->Add(btnPrevYear, 0, wxEXPAND, 0);
     hbox->Add(txtYear, 0, wxEXPAND, 0);
     hbox->Add(btnNextYear, 0, wxEXPAND, 0);
 
-    vboxMonths = new wxBoxSizer(wxVERTICAL);
-    vboxMonths->Add(hbox, 0, wxEXPAND, 0);
-    vboxMonths->AddSpacer(5);
-    vboxMonths->Add(lvMonths, 1, wxEXPAND, 0);
-    pnl->SetSizer(vboxMonths);
+    vbox = new wxBoxSizer(wxVERTICAL);
+    vbox->Add(hbox, 0, wxEXPAND, 0);
+    vbox->AddSpacer(5);
+    vbox->Add(lvMonths, 1, wxEXPAND, 0);
+    pnl1->SetSizer(vbox);
 
-    return pnl;
+    vbox = new wxBoxSizer(wxVERTICAL);
+    vbox->Add(lvYears, 1, wxEXPAND, 0);
+    pnl2->SetSizer(vbox);
+
+    nb->AddPage(pnl1, "Monthly", true);
+    nb->AddPage(pnl2, "Yearly", false);
+
+    return nb;
 }
 wxWindow* MyFrame::CreateExpensesView(wxWindow *parent) {
     wxSplitterWindow *split;
@@ -333,23 +355,43 @@ void MyFrame::RefreshMenu() {
 }
 void MyFrame::RefreshNav() {
     ExpenseContext *ctx = getContext();
-    wxTextCtrl *txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
-    wxListView *lvList = (wxListView *) wxWindow::FindWindowById(ID_NAV_LIST);
+    wxNotebook *nb = (wxNotebook *) wxWindow::FindWindowById(ID_NAV_NOTEBOOK);
     double sumamt;
     char buf[24];
 
-    txtYear->ChangeValue(wxString::Format("%d", ctx->year));
-    lvList->Select(ctx->month);
+    if (nb->GetSelection() == 0) {
+        // Refresh monthly nav
+        wxTextCtrl *txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
+        wxListView *lvMonths = (wxListView *) wxWindow::FindWindowById(ID_NAV_MONTHSLIST);
 
-    ctx_expenses_subtotal_year(ctx, ctx->year, &sumamt);
-    snprintf(buf, sizeof(buf), "%'9.2f", sumamt);
-    lvList->SetItem(0, 1, buf);
+        txtYear->ChangeValue(wxString::Format("%d", ctx->year));
+        lvMonths->Select(ctx->month);
 
-    lvList->SetItem(0, 0, wxString::Format("%d", ctx->year));
-    for (int i=1; i <= 12; i++) {
-        ctx_expenses_subtotal_month(ctx, ctx->year, i, &sumamt);
+        ctx_expenses_subtotal_year(ctx, ctx->year, &sumamt);
         snprintf(buf, sizeof(buf), "%'9.2f", sumamt);
-        lvList->SetItem(i, 1, buf);
+        lvMonths->SetItem(0, 1, buf);
+
+        lvMonths->SetItem(0, 0, wxString::Format("%d", ctx->year));
+        for (int i=1; i <= 12; i++) {
+            ctx_expenses_subtotal_month(ctx, ctx->year, i, &sumamt);
+            snprintf(buf, sizeof(buf), "%'9.2f", sumamt);
+            lvMonths->SetItem(i, 1, buf);
+        }
+    } else {
+        // Refresh yearly nav
+        wxListView *lvYears = (wxListView *) wxWindow::FindWindowById(ID_NAV_YEARSLIST);
+
+        ctx_refresh_yeartotals(ctx);
+        lvYears->DeleteAllItems();
+        for (size_t i=0; i < ctx->yeartotals->len; i++) {
+            yeartotal_t *yt = (yeartotal_t *) ctx->yeartotals->items[i];
+            lvYears->InsertItem(i, wxString::Format("%d", yt->year));
+            snprintf(buf, sizeof(buf), "%'9.2f", yt->total);
+            lvYears->SetItem(i, 1, buf);
+
+            if (yt->year == ctx->year)
+                lvYears->Select(i);
+        }
     }
 }
 void MyFrame::RefreshExpenses(uint64_t sel_expid, long sel_row) {
@@ -671,6 +713,10 @@ void MyFrame::OnPropertyGridChanged(wxPropertyGridEvent& event) {
     RefreshSingleExpenseInList(xp);
 }
 
+void MyFrame::OnNavPageChanged(wxBookCtrlEvent& event) {
+    RefreshNav();
+}
+
 static int GetNavYear() {
     ExpenseContext *ctx = getContext();
     wxTextCtrl *txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
@@ -725,11 +771,25 @@ void MyFrame::OnNavNextYear(wxCommandEvent& event) {
     RefreshNav();
     RefreshExpenses(0, 0);
 }
-void MyFrame::OnNavListSelected(wxListEvent& event) {
+void MyFrame::OnNavMonthSelected(wxListEvent& event) {
     ExpenseContext *ctx = getContext();
     int month = event.GetIndex();
 
     ctx_set_date(ctx, 0, month, 0);
+    ctx_refresh_expenses(ctx);
+    RefreshMenu();
+    RefreshExpenses(0, 0);
+}
+void MyFrame::OnNavYearSelected(wxListEvent& event) {
+    ExpenseContext *ctx = getContext();
+    int isel = event.GetIndex();
+    yeartotal_t *yt;
+
+    if ((size_t) isel >= ctx->yeartotals->len)
+        return;
+    yt = (yeartotal_t *) ctx->yeartotals->items[isel];
+
+    ctx_set_date(ctx, yt->year, 0, 0);
     ctx_refresh_expenses(ctx);
     RefreshMenu();
     RefreshExpenses(0, 0);
