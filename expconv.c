@@ -132,7 +132,7 @@ uint64_t find_or_create_category_name(sqlite3 *db, str_t *catname) {
     uint64_t catid;
     cat_t *cat;
 
-    z = db_find_cat_by_name(db, catname, &catid);
+    z = db_find_cat_by_name(db, catname->s, &catid);
     if (z != 0) {
         fprintf(stderr, "find_or_create_category_name() sqlite db_find_cat_by_name error: %d\n", z);
         return 0;
