@@ -28,12 +28,6 @@ typedef struct {
     str_t *catname;
 } exp_t;
 
-typedef struct {
-    int year;
-    int month;
-    double total;
-} subtotal_t;
-
 cat_t *cat_new();
 void cat_free(cat_t *cat);
 void cat_dup(cat_t *destcat, cat_t *srccat);

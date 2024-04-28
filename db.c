@@ -602,35 +602,6 @@ int db_get_exp_lowest_year(sqlite3 *db, int *ret_year) {
     return 0;
 }
 
-int db_get_subtotals(sqlite3 *db, array_t *subtotals) {
-    sqlite3_stmt *stmt;
-    const char *s;
-    int z;
-    int years[250];
-    int nyears=0;
-
-    for (size_t i=0; i < subtotals->len; i++)
-        free(subtotals->items[i]);
-    array_clear(subtotals);
-
-    db_get_exp_years(db, years, countof(years), &nyears);
-
-    for (int i=0; i < nyears; i++) {
-        int year = years[i];
-        subtotal_t *st = (subtotal_t *) malloc(sizeof(subtotal_t));
-        date_t startdt = date_from_cal(year, 1, 1);
-        date_t enddt = date_from_cal(year+1, 1, 1);
-
-        st->year = year;
-        st->month = 0;
-        z = db_subtotal_exp(db, startdt, enddt, &st->total);
-        if (z != 0)
-            return z;
-        array_add(subtotals, st);
-    }
-    return 0;
-}
-
 int db_add_exp(sqlite3 *db, exp_t *xp) {
     sqlite3_stmt *stmt;
     const char *s;

@@ -18,6 +18,18 @@ typedef struct {
     array_t *subtotals;
 } ExpenseContext;
 
+typedef struct {
+    int year;
+    int month;
+    double total;
+} subtotal_t;
+
+typedef struct {
+    uint64_t catid;
+    const char* catname;
+    double total;
+} cattotal_t;
+
 const char *exp_strerror(int errnum);
 
 ExpenseContext *ctx_new();
