@@ -26,15 +26,19 @@ const char *exp_strerror(int errnum) {
     return "Unknown error";
 }
 
+#define INIT_NUM_EXPENSES 1024
+#define INIT_NUM_CATEGORIES 64
+#define INIT_NUM_SUBTOTALS 500
+
 ExpenseContext *ctx_new() {
     ExpenseContext *ctx;
 
     ctx = (ExpenseContext*) malloc(sizeof(ExpenseContext));
     ctx->expfile = str_new(0);
     ctx->expfiledb = NULL;
-    ctx->xps = array_new(0);
-    ctx->cats = array_new(0);
-    ctx->subtotals = array_new(0);
+    ctx->xps = array_new(INIT_NUM_EXPENSES);
+    ctx->cats = array_new(INIT_NUM_CATEGORIES);
+    ctx->subtotals = array_new(INIT_NUM_SUBTOTALS);
     date_to_cal(date_today(), &ctx->year, &ctx->month, &ctx->day);
 
     return ctx;
@@ -43,12 +47,6 @@ void ctx_free(ExpenseContext *ctx) {
     ctx_close(ctx);
     str_free(ctx->expfile);
 
-    for (int i=0; i < ctx->xps->len; i++)
-        exp_free(ctx->xps->items[i]);
-    for (int i=0; i < ctx->cats->len; i++)
-        cat_free(ctx->cats->items[i]);
-    for (size_t i=0; i < ctx->subtotals->len; i++)
-        free(ctx->subtotals->items[i]);
     array_free(ctx->xps);
     array_free(ctx->cats);
     array_free(ctx->subtotals);

@@ -171,7 +171,7 @@ void str_assign(str_t *str, const char *s) {
     size_t s_len = strlen(s);
     if (s_len+1 > str->cap) {
         str->cap *= 2;
-        str->s = (char*) malloc(str->cap);
+        str->s = (char*) realloc(str->s, str->cap);
     }
 
     strncpy(str->s, s, s_len);
