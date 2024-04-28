@@ -29,6 +29,7 @@ const char *exp_strerror(int errnum) {
 #define INIT_NUM_EXPENSES 1024
 #define INIT_NUM_CATEGORIES 64
 #define INIT_NUM_SUBTOTALS 500
+#define INIT_NUM_CATTOTALS 500
 
 ExpenseContext *ctx_new() {
     ExpenseContext *ctx;
@@ -39,6 +40,7 @@ ExpenseContext *ctx_new() {
     ctx->xps = array_new(INIT_NUM_EXPENSES);
     ctx->cats = array_new(INIT_NUM_CATEGORIES);
     ctx->subtotals = array_new(INIT_NUM_SUBTOTALS);
+    ctx->cattotals = array_new(INIT_NUM_CATTOTALS);
     date_to_cal(date_today(), &ctx->year, &ctx->month, &ctx->day);
 
     return ctx;
@@ -50,6 +52,7 @@ void ctx_free(ExpenseContext *ctx) {
     array_free(ctx->xps);
     array_free(ctx->cats);
     array_free(ctx->subtotals);
+    array_free(ctx->cattotals);
 
     free(ctx);
 }
@@ -68,6 +71,8 @@ void ctx_close(ExpenseContext *ctx) {
         cat_free(ctx->cats->items[i]);
     for (size_t i=0; i < ctx->subtotals->len; i++)
         free(ctx->subtotals->items[i]);
+    for (size_t i=0; i < ctx->cattotals->len; i++)
+        cattotal_free(ctx->cattotals->items[i]);
     array_clear(ctx->xps);
     array_clear(ctx->cats);
     array_clear(ctx->subtotals);
@@ -88,6 +93,7 @@ int ctx_create_expense_file(ExpenseContext *ctx, const char *filename) {
     ctx_refresh_categories(ctx);
     ctx_refresh_expenses(ctx);
     ctx_refresh_subtotals(ctx);
+    ctx_refresh_cattotals(ctx);
 
     return 0;
 }
@@ -107,6 +113,7 @@ int ctx_open_expense_file(ExpenseContext *ctx, const char *filename) {
     ctx_refresh_categories(ctx);
     ctx_refresh_expenses(ctx);
     ctx_refresh_subtotals(ctx);
+    ctx_refresh_cattotals(ctx);
 
     return 0;
 }
@@ -265,7 +272,6 @@ int ctx_refresh_subtotals(ExpenseContext *ctx) {
 
     return 0;
 }
-
 int ctx_refresh_subtotals_year_month(ExpenseContext *ctx, int year, int month) {
     int z;
     int istart=-1;
@@ -311,6 +317,22 @@ int ctx_refresh_subtotals_year_month(ExpenseContext *ctx, int year, int month) {
     st->total = total;
 
     return 0;
+}
+
+int ctx_refresh_cattotals(ExpenseContext *ctx) {
+    date_t startdate;
+    date_t enddate;
+
+    if (ctx->month == 0) {
+        // 1 year
+        startdate = date_from_cal(ctx->year, 1, 1);
+        enddate = date_from_cal(ctx->year+1, 1, 1);
+    } else {
+        // 1 month
+        startdate = date_from_cal(ctx->year, ctx->month, 1);
+        enddate = date_next_month(startdate);
+    }
+    return db_select_cattotals(ctx->expfiledb, startdate, enddate, ctx->cattotals);
 }
 
 int ctx_delete_category(ExpenseContext *ctx, uint64_t catid) {

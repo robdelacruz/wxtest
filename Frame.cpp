@@ -544,6 +544,7 @@ void MyFrame::EditExpense(exp_t *xp) {
 
         ctx_refresh_expenses(ctx);
         ctx_refresh_subtotals_year_month(ctx, xpyear, xpmonth);
+        ctx_refresh_cattotals(ctx);
 
         RefreshMenu();
         RefreshNav();
@@ -653,6 +654,7 @@ void MyFrame::OnExpenseDel(wxCommandEvent& event) {
 
     ctx_refresh_expenses(ctx);
     ctx_refresh_subtotals_year_month(ctx, xpyear, xpmonth);
+    ctx_refresh_cattotals(ctx);
 
     if ((size_t) lsel > ctx->xps->len-1)
         lsel = ctx->xps->len-1;
@@ -672,6 +674,7 @@ void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
     ctx_refresh_subtotals(ctx);
     ctx_refresh_categories(ctx);
     ctx_refresh_expenses(ctx);
+    ctx_refresh_cattotals(ctx);
     RefreshExpenses(0, lsel);
 }
 
@@ -683,6 +686,7 @@ void MyFrame::OnPrevious(wxCommandEvent& event) {
         ctx_set_date_previous_month(ctx);
 
     ctx_refresh_expenses(ctx);
+    ctx_refresh_cattotals(ctx);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
@@ -695,6 +699,7 @@ void MyFrame::OnNext(wxCommandEvent& event) {
         ctx_set_date_next_month(ctx);
 
     ctx_refresh_expenses(ctx);
+    ctx_refresh_cattotals(ctx);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
@@ -800,6 +805,7 @@ void MyFrame::OnNavYearChanged(wxCommandEvent& event) {
 
     ctx_set_date(ctx, year, 0, 0);
     ctx_refresh_expenses(ctx);
+    ctx_refresh_cattotals(ctx);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
@@ -810,6 +816,7 @@ void MyFrame::OnNavPrevYear(wxCommandEvent& event) {
 
     ctx_set_date(ctx, year-1, 0, 0);
     ctx_refresh_expenses(ctx);
+    ctx_refresh_cattotals(ctx);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
@@ -820,6 +827,7 @@ void MyFrame::OnNavNextYear(wxCommandEvent& event) {
 
     ctx_set_date(ctx, year+1, 0, 0);
     ctx_refresh_expenses(ctx);
+    ctx_refresh_cattotals(ctx);
     RefreshMenu();
     RefreshNav();
     RefreshExpenses(0, 0);
@@ -830,8 +838,14 @@ void MyFrame::OnNavMonthSelected(wxListEvent& event) {
 
     ctx_set_date(ctx, 0, month, 0);
     ctx_refresh_expenses(ctx);
+    ctx_refresh_cattotals(ctx);
     RefreshMenu();
     RefreshExpenses(0, 0);
+
+    for (size_t i=0; i < ctx->cattotals->len; i++) {
+        cattotal_t *ct = (cattotal_t *) ctx->cattotals->items[i];
+        printf("catname: '%s' total: %'9.2f numxps: %d\n", ct->catname->s, ct->total, ct->numxps);
+    }
 }
 void MyFrame::OnNavYearSelected(wxListEvent& event) {
     ExpenseContext *ctx = getContext();
@@ -839,6 +853,7 @@ void MyFrame::OnNavYearSelected(wxListEvent& event) {
 
     ctx_set_date(ctx, year, 0, 0);
     ctx_refresh_expenses(ctx);
+    ctx_refresh_cattotals(ctx);
     RefreshMenu();
     RefreshExpenses(0, 0);
 }

@@ -177,7 +177,6 @@ void exp_free(exp_t *xp) {
     str_free(xp->catname);
     free(xp);
 }
-
 void exp_dup(exp_t *dest, exp_t *src) {
     dest->expid = src->expid;
     dest->date = src->date;
@@ -186,11 +185,23 @@ void exp_dup(exp_t *dest, exp_t *src) {
     dest->catid = src->catid;
     str_assign(dest->catname, src->catname->s);
 }
-
 int exp_is_valid(exp_t *xp) {
     if (xp->desc->len == 0)
         return 0;
     return 1;
+}
+
+cattotal_t *cattotal_new() {
+    cattotal_t *ct = (cattotal_t *) malloc(sizeof(cattotal_t));
+    ct->catid = 0;
+    ct->catname = str_new(0);
+    ct->total = 0.0;
+    ct->numxps = 0;
+    return ct;
+}
+void cattotal_free(cattotal_t *ct) {
+    str_free(ct->catname);
+    free(ct);
 }
 
 int db_find_cat_by_id(sqlite3 *db, uint64_t catid, cat_t *cat) {
@@ -598,6 +609,48 @@ int db_get_exp_lowest_year(sqlite3 *db, int *ret_year) {
     date_to_cal(row_dt, &row_year, NULL, NULL);
     *ret_year = row_year;
 
+    sqlite3_finalize(stmt);
+    return 0;
+}
+
+int db_select_cattotals(sqlite3 *db, date_t min_date, date_t max_date, array_t *cattotals) {
+    cattotal_t *ct;
+    sqlite3_stmt *stmt;
+    const char *s;
+    int z;
+
+    s = "SELECT exp.cat_id, IFNULL(cat.name, ''), SUM(exp.amt) AS total, COUNT(exp.exp_id) AS numxps "
+        "FROM exp "
+        "LEFT OUTER JOIN cat ON exp.cat_id = cat.cat_id "
+        "WHERE date >= ? AND date < ? "
+        "GROUP BY exp.cat_id "
+        "ORDER BY total DESC ";
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    z = sqlite3_bind_int(stmt, 1, min_date);
+    assert(z == 0);
+    z = sqlite3_bind_int(stmt, 2, max_date);
+    assert(z == 0);
+
+    for (size_t i=0; i < cattotals->len; i++)
+        cattotal_free((cattotal_t *) cattotals->items[i]);
+    array_clear(cattotals);
+
+    while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
+        ct = cattotal_new();
+        ct->catid = sqlite3_column_int64(stmt, 0);
+        str_assign(ct->catname, (char*)sqlite3_column_text(stmt, 1));
+        ct->total = sqlite3_column_double(stmt, 2);
+        ct->numxps = sqlite3_column_int(stmt, 3);
+        array_add(cattotals, ct);
+    }
+    if (z != SQLITE_DONE) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
     sqlite3_finalize(stmt);
     return 0;
 }

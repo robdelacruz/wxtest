@@ -16,6 +16,7 @@ typedef struct {
     array_t *xps;
     array_t *cats;
     array_t *subtotals;
+    array_t *cattotals;
 } ExpenseContext;
 
 typedef struct {
@@ -23,12 +24,6 @@ typedef struct {
     int month;
     double total;
 } subtotal_t;
-
-typedef struct {
-    uint64_t catid;
-    const char* catname;
-    double total;
-} cattotal_t;
 
 const char *exp_strerror(int errnum);
 
@@ -46,11 +41,15 @@ void ctx_set_date_next_month(ExpenseContext *ctx);
 
 int ctx_refresh_categories(ExpenseContext *ctx);
 int ctx_refresh_expenses(ExpenseContext *ctx);
+
 int ctx_expenses_subtotal_year(ExpenseContext *ctx, int year, double *sum);
 int ctx_expenses_subtotal_month(ExpenseContext *ctx, int year, int month, double *sum);
 int ctx_expenses_subtotal_day(ExpenseContext *ctx, int year, int month, int day, double *sum);
+
 int ctx_refresh_subtotals(ExpenseContext *ctx);
 int ctx_refresh_subtotals_year_month(ExpenseContext *ctx, int year, int month);
+
+int ctx_refresh_cattotals(ExpenseContext *ctx);
 
 int ctx_delete_category(ExpenseContext *ctx, uint64_t catid);
 
