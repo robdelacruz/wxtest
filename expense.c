@@ -298,6 +298,7 @@ int ctx_refresh_subtotals_year_month(ExpenseContext *ctx, int year, int month) {
     if (z != 0)
         return z;
     st = (subtotal_t *)ctx->subtotals->items[istart];
+    assert(st->month == 0);
     st->year = year;
     st->month = 0;
     st->total = total;
@@ -307,8 +308,8 @@ int ctx_refresh_subtotals_year_month(ExpenseContext *ctx, int year, int month) {
     if (z != 0)
         return z;
     st = (subtotal_t *)ctx->subtotals->items[istart+month];
+    assert(st->month == month);
     st->year = year;
-    st->month = 0;
     st->total = total;
 
     return 0;

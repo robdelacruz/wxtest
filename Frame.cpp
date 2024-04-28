@@ -529,6 +529,7 @@ void MyFrame::RefreshExpenseGrid(exp_t *xp) {
 void MyFrame::EditExpense(exp_t *xp) {
     ExpenseContext *ctx = getContext();
     int xpyear, xpmonth, xpday;
+    uint64_t expid;
 
     EditExpenseDialog dlg(this, xp);
     if (dlg.ShowModal() == wxID_OK) {
@@ -539,12 +540,14 @@ void MyFrame::EditExpense(exp_t *xp) {
 
         date_to_cal(xp->date, &xpyear, &xpmonth, &xpday);
         ctx_set_date(ctx, xpyear, xpmonth, xpday);
+        expid = xp->expid;
+
         ctx_refresh_expenses(ctx);
         ctx_refresh_subtotals_year_month(ctx, xpyear, xpmonth);
 
         RefreshMenu();
         RefreshNav();
-        RefreshExpenses(xp->expid, 0);
+        RefreshExpenses(expid, 0);
     }
 }
 
@@ -653,6 +656,7 @@ void MyFrame::OnExpenseDel(wxCommandEvent& event) {
 
     if ((size_t) lsel > ctx->xps->len-1)
         lsel = ctx->xps->len-1;
+    RefreshNav();
     RefreshExpenses(0, lsel);
 }
 void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
