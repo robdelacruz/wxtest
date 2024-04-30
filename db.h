@@ -32,7 +32,7 @@ typedef struct {
     uint64_t catid;
     str_t *catname;
     double total;
-    int numxps;
+    int count;
 } cattotal_t;
 
 cat_t *cat_new();

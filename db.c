@@ -196,7 +196,7 @@ cattotal_t *cattotal_new() {
     ct->catid = 0;
     ct->catname = str_new(0);
     ct->total = 0.0;
-    ct->numxps = 0;
+    ct->count = 0;
     return ct;
 }
 void cattotal_free(cattotal_t *ct) {
@@ -619,7 +619,7 @@ int db_select_cattotals(sqlite3 *db, date_t min_date, date_t max_date, array_t *
     const char *s;
     int z;
 
-    s = "SELECT exp.cat_id, IFNULL(cat.name, ''), SUM(exp.amt) AS total, COUNT(exp.exp_id) AS numxps "
+    s = "SELECT exp.cat_id, IFNULL(cat.name, ''), SUM(exp.amt) AS total, COUNT(exp.exp_id) AS count "
         "FROM exp "
         "LEFT OUTER JOIN cat ON exp.cat_id = cat.cat_id "
         "WHERE date >= ? AND date < ? "
@@ -644,7 +644,7 @@ int db_select_cattotals(sqlite3 *db, date_t min_date, date_t max_date, array_t *
         ct->catid = sqlite3_column_int64(stmt, 0);
         str_assign(ct->catname, (char*)sqlite3_column_text(stmt, 1));
         ct->total = sqlite3_column_double(stmt, 2);
-        ct->numxps = sqlite3_column_int(stmt, 3);
+        ct->count = sqlite3_column_int(stmt, 3);
         array_add(cattotals, ct);
     }
     if (z != SQLITE_DONE) {

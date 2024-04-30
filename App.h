@@ -16,7 +16,9 @@ enum {
     ID_NO_OPEN_FILE,
     ID_MAIN_PANEL,
 
-    ID_NAV_NOTEBOOK,
+    ID_CONTENT_NB,
+
+    ID_NAV_NB,
     ID_NAV_YEAR,
     ID_NAV_PREVYEAR,
     ID_NAV_NEXTYEAR,
@@ -30,6 +32,9 @@ enum {
     ID_EXPENSES_FILTERTEXT,
     ID_EXPENSES_LIST,
     ID_EXPENSE_GRID,
+
+    ID_CATEGORIES_SUMMARY_PANEL,
+    ID_CATEGORIES_SUMMARY_LIST,
 
     ID_EDITEXPENSE_DESCRIPTION,
     ID_EDITEXPENSE_AMOUNT,
@@ -54,5 +59,8 @@ public:
 wxDECLARE_APP(MyApp);
 
 ExpenseContext *getContext();
+wxString formatAmount(double amt, const char *fmt="%'9.2f");
+wxString formatDate(date_t dt, const char *fmt);
+wxString formatDate(int year, int month, int day, const char *fmt);
 
 #endif

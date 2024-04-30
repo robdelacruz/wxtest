@@ -76,6 +76,7 @@ void ctx_close(ExpenseContext *ctx) {
     array_clear(ctx->xps);
     array_clear(ctx->cats);
     array_clear(ctx->subtotals);
+    array_clear(ctx->cattotals);
 }
 
 int ctx_create_expense_file(ExpenseContext *ctx, const char *filename) {

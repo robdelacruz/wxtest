@@ -15,17 +15,20 @@ public:
     void CreateMenuBar();
     void CreateControls();
     wxWindow *CreateNav(wxWindow *parent);
+    wxWindow *CreateContentView(wxWindow *parent);
     wxWindow *CreateExpensesView(wxWindow *parent);
     wxWindow *CreateExpensesList(wxWindow *parent);
-    wxWindow *CreateExpensePropGrid(wxWindow *parent);
+    wxWindow *CreateExpensePG(wxWindow *parent);
+    wxWindow *CreateCategorySummary(wxWindow *parent);
     void RefreshFrame();
 
     void RefreshMenu();
     void RefreshNav();
-    void RefreshExpenses(uint64_t sel_expid, long sel_row);
+
     void RefreshExpensesList(uint64_t sel_expid, long sel_row);
     void RefreshSingleExpenseInList(exp_t *xp);
-    void RefreshExpenseGrid(exp_t *xp);
+    void RefreshExpensePG(exp_t *xp);
+    void RefreshCategorySummary();
 
     void EditExpense(exp_t *xp);
 
@@ -39,12 +42,12 @@ public:
     void OnExpenseDel(wxCommandEvent& event);
     void OnExpenseCategories(wxCommandEvent& event);
 
-    void OnPrevious(wxCommandEvent& event);
-    void OnNext(wxCommandEvent& event);
-    void OnListItemSelected(wxListEvent& event);
-    void OnListItemDeselected(wxListEvent& event);
-    void OnListItemActivated(wxListEvent& event);
-    void OnPropertyGridChanged(wxPropertyGridEvent& event);
+    void OnExpensesPrevious(wxCommandEvent& event);
+    void OnExpensesNext(wxCommandEvent& event);
+    void OnExpenseListItemSelected(wxListEvent& event);
+    void OnExpenseListItemDeselected(wxListEvent& event);
+    void OnExpenseListItemActivated(wxListEvent& event);
+    void OnExpensePropertyGridChanged(wxPropertyGridEvent& event);
 
     void OnNavPageChanged(wxBookCtrlEvent& event);
     void OnNavYearChanged(wxCommandEvent& event);

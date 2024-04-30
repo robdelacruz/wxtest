@@ -19,3 +19,12 @@ ExpenseContext *getContext() {
     return wxGetApp().m_expctx;
 }
 
+wxString formatAmount(double amt, const char *fmt) {
+    return wxString::Format("%'9.2f", amt);
+}
+wxString formatDate(date_t dt, const char *fmt) {
+    return wxDateTime(dt).Format(fmt);
+}
+wxString formatDate(int year, int month, int day, const char *fmt) {
+    return wxDateTime(date_from_cal(year,month,day)).Format(fmt);
+}
