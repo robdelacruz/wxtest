@@ -135,7 +135,7 @@ uint64_t EditExpenseDialog::GetCatIdFromSelectedIndex(int icatsel) {
 
     if (icatsel < 0)
         return 0;
-    if (icatsel > (int) ctx->cats->len-1)
+    if ((size_t)icatsel > ctx->cats->len-1)
         return 0;
 
     cat = (cat_t *) ctx->cats->items[icatsel];

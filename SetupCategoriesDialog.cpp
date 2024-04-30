@@ -105,7 +105,7 @@ void SetupCategoriesDialog::Refresh(uint64_t sel_catid, int sel_row) {
     lb->InsertItems(cats, 0);
 
     // Restore previous row selection.
-    if (sel_row >= 0 && (size_t) sel_row < ctx->cats->len) {
+    if (sel_row >= 0 && (size_t)sel_row < ctx->cats->len) {
         lb->SetSelection(sel_row);
         lb->EnsureVisible(sel_row);
     }
@@ -208,7 +208,7 @@ void SetupCategoriesDialog::OnDelete(wxCommandEvent& event) {
     ctx_delete_category(ctx, cat->catid);
 
     ctx_refresh_categories(ctx);
-    if ((size_t) isel > ctx->cats->len-1)
+    if ((size_t)isel > ctx->cats->len-1)
         isel = ctx->cats->len-1;
     Refresh(0, isel);
     ShowControls();
