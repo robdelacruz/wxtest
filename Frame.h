@@ -47,7 +47,13 @@ public:
     void OnExpenseListItemSelected(wxListEvent& event);
     void OnExpenseListItemDeselected(wxListEvent& event);
     void OnExpenseListItemActivated(wxListEvent& event);
+    void OnExpenseListItemRightClick(wxListEvent& event);
+    void OnExpenseListColClick(wxListEvent& event);
+    void OnExpenseListColRightClick(wxListEvent& event);
     void OnExpensePropertyGridChanged(wxPropertyGridEvent& event);
+
+    void OnSortExpenseDateAscending(wxCommandEvent& event);
+    void OnSortExpenseDateDescending(wxCommandEvent& event);
 
     void OnNavPageChanged(wxBookCtrlEvent& event);
     void OnNavYearChanged(wxCommandEvent& event);

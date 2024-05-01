@@ -34,6 +34,9 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(ID_EXPENSE_DEL, MyFrame::OnExpenseDel)
     EVT_MENU(ID_EXPENSE_CATEGORIES, MyFrame::OnExpenseCategories)
 
+    EVT_MENU(ID_EXPENSE_SORT_DATE_ASC, MyFrame::OnSortExpenseDateAscending)
+    EVT_MENU(ID_EXPENSE_SORT_DATE_DESC, MyFrame::OnSortExpenseDateDescending)
+
     EVT_NOTEBOOK_PAGE_CHANGED(ID_NAV_NB, MyFrame::OnNavPageChanged)
     EVT_TEXT(ID_NAV_YEAR, MyFrame::OnNavYearChanged)
     EVT_BUTTON(ID_NAV_PREVYEAR, MyFrame::OnNavPrevYear)
@@ -46,6 +49,9 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_LIST_ITEM_SELECTED(ID_EXPENSES_LIST, MyFrame::OnExpenseListItemSelected)
     EVT_LIST_ITEM_DESELECTED(ID_EXPENSES_LIST, MyFrame::OnExpenseListItemDeselected)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnExpenseListItemActivated)
+    EVT_LIST_ITEM_RIGHT_CLICK(ID_EXPENSES_LIST, MyFrame::OnExpenseListItemRightClick)
+    EVT_LIST_COL_CLICK(ID_EXPENSES_LIST, MyFrame::OnExpenseListColClick)
+    EVT_LIST_COL_RIGHT_CLICK(ID_EXPENSES_LIST, MyFrame::OnExpenseListColRightClick)
 
     EVT_PG_CHANGED(ID_EXPENSE_GRID, MyFrame::OnExpensePropertyGridChanged)
 wxEND_EVENT_TABLE()
@@ -64,7 +70,7 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefau
 
     CreateMenuBar();
     CreateStatusBar(2);
-    SetStatusText(wxT("Expense Buddy"));
+    SetStatusText("Expense Buddy");
     CreateControls();
     RefreshFrame();
     RefreshMenu();
@@ -90,25 +96,23 @@ void MyFrame::CreateMenuBar() {
 
     mb = new wxMenuBar();
     menu = new wxMenu;
-    menu->Append(wxID_NEW, wxT("&New\tCtrl-Shift-N"), wxT("New Expense File"));
-    menu->Append(wxID_OPEN, wxT("&Open\tCtrl-O"), wxT("Open Expense File"));
+    menu->Append(wxID_NEW, "&New\tCtrl-Shift-N", "New Expense File");
+    menu->Append(wxID_OPEN, "&Open\tCtrl-O", "Open Expense File");
     if (expfile_open)
-        menu->Append(wxID_CLOSE, wxT("&Close\tCtrl-W"), wxT("Close Expense File"));
-    menu->Append(wxID_EXIT, wxT("E&xit\tCtrl-Q"), wxT("Quit program"));
-    mb->Append(menu, wxT("&File"));
+        menu->Append(wxID_CLOSE, "&Close\tCtrl-W", "Close Expense File");
+    menu->Append(wxID_EXIT, "E&xit\tCtrl-Q", "Quit program");
+    mb->Append(menu, "&File");
 
     if (expfile_open) {
         menu = new wxMenu;
-        menu->Append(ID_EXPENSE_NEW, wxT("&New\tCtrl-N"), wxT("New Expense"));
-        menu->Append(ID_EXPENSE_EDIT, wxT("&Edit\tCtrl-E"), wxT("Edit Expense"));
-        menu->Append(ID_EXPENSE_DEL, wxT("&Delete\tCtrl-X"), wxT("Delete Expense"));
+        menu->Append(ID_EXPENSE_NEW, "&New\tCtrl-N", "New Expense");
+        menu->Append(ID_EXPENSE_EDIT, "&Edit\tCtrl-E", "Edit Expense");
+        menu->Append(ID_EXPENSE_DEL, "&Delete\tCtrl-X", "Delete Expense");
         menu->AppendSeparator();
-        menu->Append(ID_EXPENSE_CATEGORIES, wxT("&Categories...\tCtrl-T"), wxT("Setup Categories..."));
-        mb->Append(menu, wxT("&Expense"));
+        menu->Append(ID_EXPENSE_CATEGORIES, "Setup &Categories...\tCtrl-T", "Setup Categories");
+        mb->Append(menu, "&Expense");
 
         menu = new wxMenu;
-        menu->Append(ID_VIEW_MONTHLY, "&Monthly", "Monthly View", wxITEM_CHECK);
-        menu->Append(ID_VIEW_DAILY, "&Daily", "Daily View", wxITEM_CHECK);
         mb->Append(menu, "&View");
     }
     SetMenuBar(mb);
@@ -120,13 +124,14 @@ void MyFrame::CreateControls() {
     wxSplitterWindow *split;
     wxWindow *nav;
     wxWindow *contentview;
+    wxWindow *lv;
     wxBoxSizer *vbox;
     wxBoxSizer *vboxMain;
 
     DestroyChildren();
     SetSizer(NULL);
 
-    st = new wxStaticText(this, ID_NO_OPEN_FILE, "No expense file open.", wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL);
+    st = new wxStaticText(this, ID_FRAME_CAPTION, "No expense file open.", wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL);
     pnlMain = new wxPanel(this, ID_MAIN_PANEL);
 
     split = new wxSplitterWindow(pnlMain, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D);
@@ -144,7 +149,9 @@ void MyFrame::CreateControls() {
     vbox->Add(pnlMain, 1, wxEXPAND, 0);
     this->SetSizer(vbox);
 
-    wxWindow::FindWindowById(ID_EXPENSES_LIST)->SetFocus();
+    lv = wxWindow::FindWindowById(ID_EXPENSES_LIST);
+    assert(lv != NULL);
+    lv->SetFocus();
 }
 
 wxWindow* MyFrame::CreateNav(wxWindow *parent) {
@@ -260,7 +267,7 @@ wxWindow* MyFrame::CreateExpensesList(wxWindow *parent) {
     btnPrev = new wxBitmapButton(pnl, ID_EXPENSES_PREV, wxBitmap(back_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
     btnNext = new wxBitmapButton(pnl, ID_EXPENSES_NEXT, wxBitmap(forward_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
     lblFilter = new wxStaticText(pnl, wxID_ANY, "Filter");
-    txtFilter = new wxTextCtrl(pnl, ID_EXPENSES_FILTERTEXT, wxT(""), wxDefaultPosition, wxSize(300, BTN_HEIGHT));
+    txtFilter = new wxTextCtrl(pnl, ID_EXPENSES_FILTERTEXT, "", wxDefaultPosition, wxSize(300, BTN_HEIGHT));
 
     lv = new wxListView(pnl, ID_EXPENSES_LIST);
     lv->AppendColumn("Date");
@@ -346,17 +353,19 @@ wxWindow* MyFrame::CreateCategorySummary(wxWindow *parent) {
 
 void MyFrame::RefreshFrame() {
     ExpenseContext *ctx = getContext();
-    wxWindow *stNoOpenFile;
+    wxWindow *stCaption;
     wxWindow *pnlMain;
     wxString filename, ext;
 
-    stNoOpenFile = wxWindow::FindWindowById(ID_NO_OPEN_FILE);
+    stCaption = wxWindow::FindWindowById(ID_FRAME_CAPTION);
     pnlMain = wxWindow::FindWindowById(ID_MAIN_PANEL);
+    assert(stCaption != NULL);
+    assert(pnlMain != NULL);
 
     // No open expense file
     if (!ctx_is_open_expfile(ctx)) {
-        SetTitle(wxT("Expense Buddy"));
-        stNoOpenFile->Show(true);
+        SetTitle("Expense Buddy");
+        stCaption->Show(true);
         pnlMain->Show(false);
         Layout();
         return;
@@ -365,7 +374,7 @@ void MyFrame::RefreshFrame() {
     // Expense file opened
     wxFileName::SplitPath(wxString::FromUTF8(ctx->expfile->s), NULL, NULL, &filename, &ext);
     SetTitle(wxString::Format("Expense Buddy - [%s.%s]", filename, ext));
-    stNoOpenFile->Show(false);
+    stCaption->Show(false);
     pnlMain->Show(true);
     Layout();
 }
@@ -388,6 +397,7 @@ void MyFrame::RefreshMenu() {
 void MyFrame::RefreshNav() {
     ExpenseContext *ctx = getContext();
     wxNotebook *nb = (wxNotebook *) wxWindow::FindWindowById(ID_NAV_NB);
+    assert(nb != NULL);
 
     // ctx->subtotals array holds subtotals for all years and months in date desc order
     // It contains all years from highest to lowest that have expenses.
@@ -403,9 +413,11 @@ void MyFrame::RefreshNav() {
 
     if (nb->GetSelection() == 0) {
         // Refresh monthly nav
+        int istart = -1;
         wxTextCtrl *txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
         wxListView *lvMonths = (wxListView *) wxWindow::FindWindowById(ID_NAV_MONTHSLIST);
-        int istart = -1;
+        assert(txtYear != NULL);
+        assert(lvMonths != NULL);
 
         txtYear->ChangeValue(wxString::Format("%d", ctx->year));
         lvMonths->Select(ctx->month);
@@ -445,11 +457,11 @@ void MyFrame::RefreshNav() {
         }
     } else {
         // Refresh yearly nav
-        int nitem;
+        int nitem=0;
         wxListView *lvYears = (wxListView *) wxWindow::FindWindowById(ID_NAV_YEARSLIST);
-        lvYears->DeleteAllItems();
+        assert(lvYears != NULL);
 
-        nitem = 0;
+        lvYears->DeleteAllItems();
         for (size_t i=0; i < ctx->subtotals->len; i++) {
             subtotal_t *st = (subtotal_t *) ctx->subtotals->items[i];
             if (st->month != 0)
@@ -469,6 +481,7 @@ void MyFrame::RefreshNav() {
 // To select expense id: RefreshExpensesList(expid, 0)
 void MyFrame::RefreshExpensesList(uint64_t sel_expid, long sel_row) {
     ExpenseContext *ctx = getContext();
+    wxWindow *pnl;
     wxListView *lv;
     wxStaticText *st;
     exp_t *xp;
@@ -478,12 +491,14 @@ void MyFrame::RefreshExpensesList(uint64_t sel_expid, long sel_row) {
     RefreshExpensePG(NULL);
 
     st = (wxStaticText *) wxWindow::FindWindowById(ID_EXPENSES_HEADING, this);
+    assert(st != NULL);
     if (ctx->month == 0)
         st->SetLabel(formatDate(ctx->year, 1, 1, "%Y"));
     else
         st->SetLabel(formatDate(ctx->year, ctx->month, 1, "%b %Y"));
 
     lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
+    assert(lv != NULL);
     lv->DeleteAllItems();
 
     for (size_t i=0; i < ctx->xps->len; i++) {
@@ -505,13 +520,16 @@ void MyFrame::RefreshExpensesList(uint64_t sel_expid, long sel_row) {
         lv->EnsureVisible(sel_row);
     }
 
-    wxWindow::FindWindowById(ID_EXPENSES_PANEL)->Layout();
+    pnl = wxWindow::FindWindowById(ID_EXPENSES_PANEL);
+    assert(pnl != NULL);
+    pnl->Layout();
 }
 void MyFrame::RefreshSingleExpenseInList(exp_t *xp) {
     ExpenseContext *ctx = getContext();
     wxListView *lv;
 
     lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
+    assert(lv != NULL);
     for (size_t i=0; i < ctx->xps->len; i++) {
         exp_t *listxp = (exp_t *) ctx->xps->items[i];
         if (listxp->expid == xp->expid) {
@@ -525,6 +543,7 @@ void MyFrame::RefreshSingleExpenseInList(exp_t *xp) {
 }
 void MyFrame::RefreshExpensePG(exp_t *xp) {
     wxPropertyGrid *pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
+    assert(pg != NULL);
 
     m_propgrid_xp = xp;
 
@@ -551,7 +570,6 @@ void MyFrame::RefreshCategorySummary() {
     lv = (wxListView *) wxWindow::FindWindowById(ID_CATEGORIES_SUMMARY_LIST, this);
     assert(lv != NULL);
     lv->DeleteAllItems();
-
     for (size_t i=0; i < ctx->cattotals->len; i++) {
         ct = (cattotal_t *) ctx->cattotals->items[i];
         if (ct->catname->len > 0)
@@ -602,14 +620,14 @@ void MyFrame::OnFileNew(wxCommandEvent& event) {
     char expfile[1024];
     int z;
 
-    wxFileDialog dlg(this, wxT("New Expense File"), wxEmptyString, wxEmptyString, wxFileSelectorDefaultWildcardStr, wxFD_SAVE, wxDefaultPosition, wxDefaultSize);
+    wxFileDialog dlg(this, "New Expense File", wxEmptyString, wxEmptyString, wxFileSelectorDefaultWildcardStr, wxFD_SAVE, wxDefaultPosition, wxDefaultSize);
     if (dlg.ShowModal() == wxID_CANCEL)
         return;
 
     strncpy(expfile, dlg.GetPath().mb_str(), sizeof(expfile)-1);
     z = ctx_create_expense_file(ctx, expfile);
     if (z != 0) {
-        wxMessageDialog msgdlg(NULL, fileErrorString(dlg.GetPath(), z), wxT("Error occured"), wxOK | wxICON_ERROR);
+        wxMessageDialog msgdlg(NULL, fileErrorString(dlg.GetPath(), z), "Error occured", wxOK | wxICON_ERROR);
         msgdlg.ShowModal();
         return;
     }
@@ -626,14 +644,14 @@ void MyFrame::OnFileOpen(wxCommandEvent& event) {
     char expfile[1024];
     int z;
 
-    wxFileDialog dlg(this, wxT("Open Expense File"), wxEmptyString, wxEmptyString, wxT("*.db"), wxFD_OPEN, wxDefaultPosition, wxDefaultSize);
+    wxFileDialog dlg(this, "Open Expense File", wxEmptyString, wxEmptyString, "*.db", wxFD_OPEN, wxDefaultPosition, wxDefaultSize);
     if (dlg.ShowModal() == wxID_CANCEL)
         return;
 
     strncpy(expfile, dlg.GetPath().mb_str(), sizeof(expfile)-1);
     z = ctx_open_expense_file(ctx, expfile);
     if (z != 0) {
-        wxMessageDialog msgdlg(NULL, fileErrorString(dlg.GetPath(), z), wxT("Error occured"), wxOK | wxICON_ERROR);
+        wxMessageDialog msgdlg(NULL, fileErrorString(dlg.GetPath(), z), "Error occured", wxOK | wxICON_ERROR);
         msgdlg.ShowModal();
         return;
     }
@@ -668,24 +686,34 @@ void MyFrame::OnExpenseNew(wxCommandEvent& event) {
     exp_free(xp);
 }
 void MyFrame::OnExpenseEdit(wxCommandEvent& event) {
-    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
-    long sel_row = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    wxListView *lv;
+    long sel_row;
+    exp_t *xp;
+
+    lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
+    assert(lv != NULL);
+    sel_row = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
     if (sel_row == -1)
         return;
 
-    exp_t *xp = (exp_t *) lv->GetItemData(sel_row);
+    xp = (exp_t *) lv->GetItemData(sel_row);
     assert(xp != NULL);
     EditExpense(xp);
 }
 void MyFrame::OnExpenseDel(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
+    wxListView *lv;
+    long sel_row;
     int xpyear, xpmonth;
-    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
-    long sel_row = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    exp_t *xp;
+
+    lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
+    assert(lv != NULL);
+    sel_row = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
     if (sel_row == -1)
         return;
 
-    exp_t *xp = (exp_t *) lv->GetItemData(sel_row);
+    xp = (exp_t *) lv->GetItemData(sel_row);
     assert(xp != NULL);
 
     wxMessageDialog dlg(this, wxString::Format("Delete '%s'?", wxString::FromUTF8(xp->desc->s)), "Confirm Delete", wxYES_NO | wxNO_DEFAULT); 
@@ -706,8 +734,12 @@ void MyFrame::OnExpenseDel(wxCommandEvent& event) {
 }
 void MyFrame::OnExpenseCategories(wxCommandEvent& event) {
     ExpenseContext *ctx = getContext();
-    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
-    long sel_row = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
+    wxListView *lv;
+    long sel_row;
+
+    lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST);
+    assert(lv != NULL);
+    sel_row = lv->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
     if (sel_row == -1)
         sel_row = 0;
 
@@ -773,6 +805,80 @@ void MyFrame::OnExpenseListItemActivated(wxListEvent& event) {
 
     EditExpense(xp);
 }
+void MyFrame::OnExpenseListItemRightClick(wxListEvent& event) {
+    wxMenu menu;
+    menu.Append(ID_EXPENSE_EDIT, "&Edit\tCtrl-E", "Edit Expense");
+    menu.Append(ID_EXPENSE_DEL, "&Delete\tCtrl-X", "Delete Expense");
+    menu.AppendSeparator();
+    menu.Append(ID_EXPENSE_NEW, "&New Expense\tCtrl-N", "New Expense");
+    menu.AppendSeparator();
+    menu.Append(ID_EXPENSE_CATEGORIES, "Setup &Categories...\tCtrl-T", "Setup Categories...");
+    //PopupMenu(&menu, event.GetPoint());
+    PopupMenu(&menu);
+}
+int wxCALLBACK expenseListCompare(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
+    exp_t *exp1 = (exp_t *) item1;
+    exp_t *exp2 = (exp_t *) item2;
+    int icol = (int) sortData;
+
+    assert(exp1 != NULL);
+    assert(exp2 != NULL);
+
+    if (icol == 0) {
+        if (exp1->date < exp2->date) return 1;
+        else if (exp1->date > exp2->date) return -1;
+        else return 0;
+    } else if (icol == 1) {
+        return wxString::FromUTF8(exp1->desc->s).CmpNoCase(wxString::FromUTF8(exp2->desc->s));
+    } else if (icol == 2) {
+        if (exp1->amt < exp2->amt) return -1;
+        else if (exp1->amt > exp2->amt) return 1;
+        else return 0;
+    } else if (icol == 3) {
+        return wxString::FromUTF8(exp1->catname->s).CmpNoCase(wxString::FromUTF8(exp2->catname->s));
+    }
+    return 0;
+}
+int wxCALLBACK expenseListCompareDateAscending(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
+    exp_t *exp1 = (exp_t *) item1;
+    exp_t *exp2 = (exp_t *) item2;
+    if (exp1->date < exp2->date) return -1;
+    else if (exp1->date > exp2->date) return 1;
+    else return 0;
+}
+int wxCALLBACK expenseListCompareDateDescending(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
+    exp_t *exp1 = (exp_t *) item1;
+    exp_t *exp2 = (exp_t *) item2;
+    if (exp1->date < exp2->date) return 1;
+    else if (exp1->date > exp2->date) return -1;
+    else return 0;
+}
+void MyFrame::OnExpenseListColClick(wxListEvent& event) {
+    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
+    assert(lv != NULL);
+    lv->SortItems(expenseListCompare, (wxIntPtr) event.GetColumn());
+}
+void MyFrame::OnExpenseListColRightClick(wxListEvent& event) {
+    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
+    assert(lv != NULL);
+
+    if (event.GetColumn() != 0)
+        return;
+    wxMenu menu;
+    menu.Append(ID_EXPENSE_SORT_DATE_ASC, "&Oldest Dates First", "Show oldest expenses first");
+    menu.Append(ID_EXPENSE_SORT_DATE_DESC, "&Latest Dates First", "Show latest expenses first");
+    PopupMenu(&menu);
+}
+void MyFrame::OnSortExpenseDateAscending(wxCommandEvent& event) {
+    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
+    assert(lv != NULL);
+    lv->SortItems(expenseListCompareDateAscending, 0);
+}
+void MyFrame::OnSortExpenseDateDescending(wxCommandEvent& event) {
+    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
+    assert(lv != NULL);
+    lv->SortItems(expenseListCompareDateDescending, 0);
+}
 
 //    wxPGProperty *prop = event.GetProperty();
 //    const wxString& name = prop->GetName();
@@ -794,6 +900,7 @@ void MyFrame::OnExpensePropertyGridChanged(wxPropertyGridEvent& event) {
     xp = m_propgrid_xp;
 
     pg = (wxPropertyGrid *) wxWindow::FindWindowById(ID_EXPENSE_GRID);
+    assert(pg != NULL);
     propDesc = pg->GetProperty("Description");
     propAmount = pg->GetProperty("Amount");
     propCat = pg->GetProperty("Category");
@@ -823,9 +930,12 @@ void MyFrame::OnNavPageChanged(wxBookCtrlEvent& event) {
 
 static int GetNavYear() {
     ExpenseContext *ctx = getContext();
-    wxTextCtrl *txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
-    wxString strYear = txtYear->GetValue().Trim().Truncate(4);
+    wxTextCtrl *txtYear;
     int year;
+
+    txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
+    assert(txtYear != NULL);
+    wxString strYear = txtYear->GetValue().Trim().Truncate(4);
 
     if (strYear.Length() < 4)
         return ctx->year;

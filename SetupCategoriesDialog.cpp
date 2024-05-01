@@ -120,7 +120,7 @@ void SetupCategoriesDialog::OnAdd(wxCommandEvent& event) {
     cat_t *cat;
     uint64_t existingid;
 
-    wxTextEntryDialog dlg(this, wxString::Format("New category"));
+    wxTextEntryDialog dlg(this, "Category Name", "Enter new category");
     if (dlg.ShowModal() != wxID_OK)
         return;
 

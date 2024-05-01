@@ -266,7 +266,7 @@ int db_select_cat(sqlite3 *db, array_t *cats) {
     const char *s;
     int z;
 
-    s = "SELECT cat_id, name FROM cat ORDER BY name";
+    s = "SELECT cat_id, name FROM cat ORDER BY name COLLATE NOCASE ASC";
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
@@ -371,7 +371,7 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps) {
         "FROM exp "
         "LEFT OUTER JOIN cat ON exp.cat_id = cat.cat_id "
         "WHERE date >= ? AND date < ? "
-        "ORDER BY date ";
+        "ORDER BY date DESC ";
     z = prepare_sql(db, s, &stmt);
     if (z != 0) {
         db_handle_err(db, stmt, s);
