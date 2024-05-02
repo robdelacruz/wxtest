@@ -34,9 +34,6 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(ID_EXPENSE_DEL, MyFrame::OnExpenseDel)
     EVT_MENU(ID_EXPENSE_CATEGORIES, MyFrame::OnExpenseCategories)
 
-    EVT_MENU(ID_EXPENSE_SORT_DATE_ASC, MyFrame::OnSortExpenseDateAscending)
-    EVT_MENU(ID_EXPENSE_SORT_DATE_DESC, MyFrame::OnSortExpenseDateDescending)
-
     EVT_NOTEBOOK_PAGE_CHANGED(ID_NAV_NB, MyFrame::OnNavPageChanged)
     EVT_TEXT(ID_NAV_YEAR, MyFrame::OnNavYearChanged)
     EVT_BUTTON(ID_NAV_PREVYEAR, MyFrame::OnNavPrevYear)
@@ -51,7 +48,6 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnExpenseListItemActivated)
     EVT_LIST_ITEM_RIGHT_CLICK(ID_EXPENSES_LIST, MyFrame::OnExpenseListItemRightClick)
     EVT_LIST_COL_CLICK(ID_EXPENSES_LIST, MyFrame::OnExpenseListColClick)
-    EVT_LIST_COL_RIGHT_CLICK(ID_EXPENSES_LIST, MyFrame::OnExpenseListColRightClick)
 
     EVT_PG_CHANGED(ID_EXPENSE_GRID, MyFrame::OnExpensePropertyGridChanged)
 wxEND_EVENT_TABLE()
@@ -523,6 +519,11 @@ void MyFrame::RefreshExpensesList(uint64_t sel_expid, long sel_row) {
     pnl = wxWindow::FindWindowById(ID_EXPENSES_PANEL);
     assert(pnl != NULL);
     pnl->Layout();
+
+    m_sortDate = false;
+    m_sortDesc = false;
+    m_sortAmt = false;
+    m_sortCat = false;
 }
 void MyFrame::RefreshSingleExpenseInList(exp_t *xp) {
     ExpenseContext *ctx = getContext();
@@ -816,74 +817,55 @@ void MyFrame::OnExpenseListItemRightClick(wxListEvent& event) {
     //PopupMenu(&menu, event.GetPoint());
     PopupMenu(&menu);
 }
-int wxCALLBACK expenseListCompare(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
-    exp_t *exp1 = (exp_t *) item1;
-    exp_t *exp2 = (exp_t *) item2;
-    int icol = (int) sortData;
-
-    assert(exp1 != NULL);
-    assert(exp2 != NULL);
-
-    if (icol == 0) {
-        if (exp1->date < exp2->date) return 1;
-        else if (exp1->date > exp2->date) return -1;
-        else return 0;
-    } else if (icol == 1) {
-        return wxString::FromUTF8(exp1->desc->s).CmpNoCase(wxString::FromUTF8(exp2->desc->s));
-    } else if (icol == 2) {
-        if (exp1->amt < exp2->amt) return -1;
-        else if (exp1->amt > exp2->amt) return 1;
-        else return 0;
-    } else if (icol == 3) {
-        return wxString::FromUTF8(exp1->catname->s).CmpNoCase(wxString::FromUTF8(exp2->catname->s));
-    }
-    return 0;
-}
-int wxCALLBACK expenseListCompareDateAscending(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
-    exp_t *exp1 = (exp_t *) item1;
-    exp_t *exp2 = (exp_t *) item2;
-    if (exp1->date < exp2->date) return -1;
-    else if (exp1->date > exp2->date) return 1;
-    else return 0;
-}
-int wxCALLBACK expenseListCompareDateDescending(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
-    exp_t *exp1 = (exp_t *) item1;
-    exp_t *exp2 = (exp_t *) item2;
-    if (exp1->date < exp2->date) return 1;
-    else if (exp1->date > exp2->date) return -1;
-    else return 0;
-}
 void MyFrame::OnExpenseListColClick(wxListEvent& event) {
     wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
     assert(lv != NULL);
-    lv->SortItems(expenseListCompare, (wxIntPtr) event.GetColumn());
-}
-void MyFrame::OnExpenseListColRightClick(wxListEvent& event) {
-    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
-    assert(lv != NULL);
-
-    if (event.GetColumn() != 0)
+    int icol = event.GetColumn();
+    if (icol == 0) {
+        m_sortDate = !m_sortDate;
+        if (m_sortDate)
+            lv->SortItems(cmpExpDateAsc, 0);
+        else
+            lv->SortItems(cmpExpDateDesc, 0);
+        m_sortDesc = false;
+        m_sortAmt = false;
+        m_sortCat = false;
         return;
-    wxMenu menu;
-    menu.Append(ID_EXPENSE_SORT_DATE_ASC, "&Oldest Dates First", "Show oldest expenses first");
-    menu.Append(ID_EXPENSE_SORT_DATE_DESC, "&Latest Dates First", "Show latest expenses first");
-    PopupMenu(&menu);
+    }
+    if (icol == 1) {
+        m_sortDesc = !m_sortDesc;
+        if (m_sortDesc)
+            lv->SortItems(cmpExpDescriptionAsc, 0);
+        else
+            lv->SortItems(cmpExpDescriptionDesc, 0);
+        m_sortDate = false;
+        m_sortAmt = false;
+        m_sortCat = false;
+        return;
+    }
+    if (icol == 2) {
+        m_sortAmt = !m_sortAmt;
+        if (m_sortAmt)
+            lv->SortItems(cmpExpAmtAsc, 0);
+        else
+            lv->SortItems(cmpExpAmtDesc, 0);
+        m_sortDate = false;
+        m_sortDesc = false;
+        m_sortCat = false;
+        return;
+    }
+    if (icol == 3) {
+        m_sortCat = !m_sortCat;
+        if (m_sortCat)
+            lv->SortItems(cmpExpCatAsc, 0);
+        else
+            lv->SortItems(cmpExpCatDesc, 0);
+        m_sortDate = false;
+        m_sortDesc = false;
+        m_sortAmt = false;
+        return;
+    }
 }
-void MyFrame::OnSortExpenseDateAscending(wxCommandEvent& event) {
-    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
-    assert(lv != NULL);
-    lv->SortItems(expenseListCompareDateAscending, 0);
-}
-void MyFrame::OnSortExpenseDateDescending(wxCommandEvent& event) {
-    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
-    assert(lv != NULL);
-    lv->SortItems(expenseListCompareDateDescending, 0);
-}
-
-//    wxPGProperty *prop = event.GetProperty();
-//    const wxString& name = prop->GetName();
-//    wxVariant v = prop->GetValue();
-//    pg->SetPropertyValue(prop, "changed!");
 
 void MyFrame::OnExpensePropertyGridChanged(wxPropertyGridEvent& event) {
     ExpenseContext *ctx = getContext();

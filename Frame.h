@@ -52,9 +52,6 @@ public:
     void OnExpenseListColRightClick(wxListEvent& event);
     void OnExpensePropertyGridChanged(wxPropertyGridEvent& event);
 
-    void OnSortExpenseDateAscending(wxCommandEvent& event);
-    void OnSortExpenseDateDescending(wxCommandEvent& event);
-
     void OnNavPageChanged(wxBookCtrlEvent& event);
     void OnNavYearChanged(wxCommandEvent& event);
     void OnNavPrevYear(wxCommandEvent& event);
@@ -64,6 +61,10 @@ public:
 
 private:
     exp_t *m_propgrid_xp;
+    bool m_sortDate = false;
+    bool m_sortDesc = false;
+    bool m_sortAmt = false;
+    bool m_sortCat = false;
 
     wxDECLARE_EVENT_TABLE();
 

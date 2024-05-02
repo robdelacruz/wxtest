@@ -10,9 +10,6 @@ enum {
     ID_EXPENSE_DEL,
     ID_EXPENSE_CATEGORIES,
 
-    ID_EXPENSE_SORT_DATE_ASC,
-    ID_EXPENSE_SORT_DATE_DESC,
-
     ID_FRAME_CAPTION,
     ID_MAIN_PANEL,
 
@@ -62,5 +59,15 @@ ExpenseContext *getContext();
 wxString formatAmount(double amt, const char *fmt="%'9.2f");
 wxString formatDate(date_t dt, const char *fmt);
 wxString formatDate(int year, int month, int day, const char *fmt);
+
+int cmpExpID(exp_t *exp1, exp_t *exp2);
+int wxCALLBACK cmpExpDateAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpExpDateDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpExpDescriptionAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpExpDescriptionDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpExpAmtAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpExpAmtDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpExpCatAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpExpCatDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
 
 #endif
