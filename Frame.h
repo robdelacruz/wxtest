@@ -49,7 +49,6 @@ public:
     void OnExpenseListItemActivated(wxListEvent& event);
     void OnExpenseListItemRightClick(wxListEvent& event);
     void OnExpenseListColClick(wxListEvent& event);
-    void OnExpenseListColRightClick(wxListEvent& event);
     void OnExpensePropertyGridChanged(wxPropertyGridEvent& event);
 
     void OnNavPageChanged(wxBookCtrlEvent& event);
@@ -59,12 +58,16 @@ public:
     void OnNavMonthSelected(wxListEvent& event);
     void OnNavYearSelected(wxListEvent& event);
 
+    void OnCategoriesSummaryListColClick(wxListEvent& event);
+
 private:
     exp_t *m_propgrid_xp;
     bool m_sortDate = false;
     bool m_sortDesc = false;
     bool m_sortAmt = false;
     bool m_sortCat = false;
+    bool m_sortCatSummaryName = false;
+    bool m_sortCatSummarySubtotal = false;
 
     wxDECLARE_EVENT_TABLE();
 

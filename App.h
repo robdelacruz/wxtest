@@ -69,5 +69,9 @@ int wxCALLBACK cmpExpAmtAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
 int wxCALLBACK cmpExpAmtDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
 int wxCALLBACK cmpExpCatAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
 int wxCALLBACK cmpExpCatDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpCatSummaryNameAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpCatSummaryNameDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpCatSummarySubtotalAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
+int wxCALLBACK cmpCatSummarySubtotalDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData);
 
 #endif

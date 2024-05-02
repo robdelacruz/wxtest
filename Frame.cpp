@@ -34,13 +34,6 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(ID_EXPENSE_DEL, MyFrame::OnExpenseDel)
     EVT_MENU(ID_EXPENSE_CATEGORIES, MyFrame::OnExpenseCategories)
 
-    EVT_NOTEBOOK_PAGE_CHANGED(ID_NAV_NB, MyFrame::OnNavPageChanged)
-    EVT_TEXT(ID_NAV_YEAR, MyFrame::OnNavYearChanged)
-    EVT_BUTTON(ID_NAV_PREVYEAR, MyFrame::OnNavPrevYear)
-    EVT_BUTTON(ID_NAV_NEXTYEAR, MyFrame::OnNavNextYear)
-    EVT_LIST_ITEM_SELECTED(ID_NAV_MONTHSLIST, MyFrame::OnNavMonthSelected)
-    EVT_LIST_ITEM_SELECTED(ID_NAV_YEARSLIST, MyFrame::OnNavYearSelected)
-
     EVT_BUTTON(ID_EXPENSES_PREV, MyFrame::OnExpensesPrevious)
     EVT_BUTTON(ID_EXPENSES_NEXT, MyFrame::OnExpensesNext)
     EVT_LIST_ITEM_SELECTED(ID_EXPENSES_LIST, MyFrame::OnExpenseListItemSelected)
@@ -48,8 +41,16 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_LIST_ITEM_ACTIVATED(ID_EXPENSES_LIST, MyFrame::OnExpenseListItemActivated)
     EVT_LIST_ITEM_RIGHT_CLICK(ID_EXPENSES_LIST, MyFrame::OnExpenseListItemRightClick)
     EVT_LIST_COL_CLICK(ID_EXPENSES_LIST, MyFrame::OnExpenseListColClick)
-
     EVT_PG_CHANGED(ID_EXPENSE_GRID, MyFrame::OnExpensePropertyGridChanged)
+
+    EVT_NOTEBOOK_PAGE_CHANGED(ID_NAV_NB, MyFrame::OnNavPageChanged)
+    EVT_TEXT(ID_NAV_YEAR, MyFrame::OnNavYearChanged)
+    EVT_BUTTON(ID_NAV_PREVYEAR, MyFrame::OnNavPrevYear)
+    EVT_BUTTON(ID_NAV_NEXTYEAR, MyFrame::OnNavNextYear)
+    EVT_LIST_ITEM_SELECTED(ID_NAV_MONTHSLIST, MyFrame::OnNavMonthSelected)
+    EVT_LIST_ITEM_SELECTED(ID_NAV_YEARSLIST, MyFrame::OnNavYearSelected)
+
+    EVT_LIST_COL_CLICK(ID_CATEGORIES_SUMMARY_LIST, MyFrame::OnCategoriesSummaryListColClick)
 wxEND_EVENT_TABLE()
 
 MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(640,480)) {
@@ -330,6 +331,7 @@ wxWindow* MyFrame::CreateExpensePG(wxWindow *parent) {
 wxWindow* MyFrame::CreateCategorySummary(wxWindow *parent) {
     wxPanel *pnl;
     wxListView *lv;
+    wxListItem colAmount;
     wxBoxSizer *vbox;
 
     pnl = new wxPanel(parent, ID_CATEGORIES_SUMMARY_PANEL, wxDefaultPosition, wxSize(-1,200));
@@ -339,6 +341,10 @@ wxWindow* MyFrame::CreateCategorySummary(wxWindow *parent) {
 
     lv->SetColumnWidth(0, 200);
     lv->SetColumnWidth(1, wxLIST_AUTOSIZE_USEHEADER);
+
+    lv->GetColumn(1, colAmount);
+    colAmount.SetAlign(wxLIST_FORMAT_RIGHT);
+    lv->SetColumn(1, colAmount);
 
     vbox = new wxBoxSizer(wxVERTICAL);
     vbox->Add(lv, 1, wxEXPAND, 0);
@@ -503,7 +509,10 @@ void MyFrame::RefreshExpensesList(uint64_t sel_expid, long sel_row) {
         lv->InsertItem(i, formatDate(xp->date, "%m-%d"));
         lv->SetItem(i, 1, xp->desc->s);
         lv->SetItem(i, 2, formatAmount(xp->amt));
-        lv->SetItem(i, 3, xp->catname->s);
+        if (xp->catname->len > 0)
+            lv->SetItem(i, 3, xp->catname->s);
+        else
+            lv->SetItem(i, 3, "No Category");
 
         lv->SetItemPtrData(i, (wxUIntPtr)xp);
 
@@ -578,9 +587,14 @@ void MyFrame::RefreshCategorySummary() {
         else
             lv->InsertItem(i, wxString::Format("No Category (%d)", ct->count));
         lv->SetItem(i, 1, formatAmount(ct->total));
+
+        lv->SetItemPtrData(i, (wxUIntPtr)ct);
     }
     if (ctx->cattotals->len > 0)
         lv->SetItemState(0, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+
+    m_sortCatSummaryName = false;
+    m_sortCatSummarySubtotal = false;
 }
 
 void MyFrame::EditExpense(exp_t *xp) {
@@ -994,5 +1008,29 @@ void MyFrame::OnNavYearSelected(wxListEvent& event) {
     RefreshMenu();
     RefreshExpensesList(0, 0);
     RefreshCategorySummary();
+}
+
+void MyFrame::OnCategoriesSummaryListColClick(wxListEvent& event) {
+    wxListView *lv = (wxListView *) wxWindow::FindWindowById(ID_CATEGORIES_SUMMARY_LIST, this);
+    assert(lv != NULL);
+    int icol = event.GetColumn();
+    if (icol == 0) {
+        m_sortCatSummaryName = !m_sortCatSummaryName;
+        if (m_sortCatSummaryName)
+            lv->SortItems(cmpCatSummaryNameAsc, 0);
+        else
+            lv->SortItems(cmpCatSummaryNameDesc, 0);
+        m_sortCatSummarySubtotal = false;
+        return;
+    }
+    if (icol == 1) {
+        m_sortCatSummarySubtotal = !m_sortCatSummarySubtotal;
+        if (m_sortCatSummarySubtotal)
+            lv->SortItems(cmpCatSummarySubtotalAsc, 0);
+        else
+            lv->SortItems(cmpCatSummarySubtotalDesc, 0);
+        m_sortCatSummaryName = false;
+        return;
+    }
 }
 
