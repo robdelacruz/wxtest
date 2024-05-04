@@ -35,99 +35,59 @@ int cmpID(uint64_t id1, uint64_t id2) {
     if (id1 > id2) return 1;
     return 0;
 }
-int wxCALLBACK cmpExpDateAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
+int wxCALLBACK cmpExpDate(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
     exp_t *exp1 = (exp_t *) item1;
     exp_t *exp2 = (exp_t *) item2;
+    int sort = (int) sortData;
 
     // Compare by date ascending, then expids.
-    if (exp1->date < exp2->date) return -1;
-    if (exp1->date > exp2->date) return 1;
+    if (exp1->date < exp2->date) return sort == SORT_UP ? -1 : 1;
+    if (exp1->date > exp2->date) return sort == SORT_UP ? 1 : -1;;
     return cmpID(exp1->expid, exp2->expid);
 }
-int wxCALLBACK cmpExpDateDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
+int wxCALLBACK cmpExpDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
     exp_t *exp1 = (exp_t *) item1;
     exp_t *exp2 = (exp_t *) item2;
+    int sort = (int) sortData;
 
-    // Compare by date descending, then expids.
-    if (exp1->date < exp2->date) return 1;
-    if (exp1->date > exp2->date) return -1;
-    return cmpID(exp1->expid, exp2->expid);
-}
-int wxCALLBACK cmpExpDescriptionAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
-    exp_t *exp1 = (exp_t *) item1;
-    exp_t *exp2 = (exp_t *) item2;
     int cmp = wxString::FromUTF8(exp1->desc->s).CmpNoCase(wxString::FromUTF8(exp2->desc->s));
-    if (cmp != 0) return cmp;
+    if (cmp != 0) return sort == SORT_UP ? cmp : -cmp;
     return cmpID(exp1->expid, exp2->expid);
 }
-int wxCALLBACK cmpExpDescriptionDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
+int wxCALLBACK cmpExpAmt(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
     exp_t *exp1 = (exp_t *) item1;
     exp_t *exp2 = (exp_t *) item2;
-    int cmp = wxString::FromUTF8(exp1->desc->s).CmpNoCase(wxString::FromUTF8(exp2->desc->s));
-    if (cmp != 0) return -cmp;
-    return cmpID(exp1->expid, exp2->expid);
-}
-int wxCALLBACK cmpExpAmtAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
-    exp_t *exp1 = (exp_t *) item1;
-    exp_t *exp2 = (exp_t *) item2;
+    int sort = (int) sortData;
 
-    if (exp1->amt < exp2->amt) return -1;
-    if (exp1->amt > exp2->amt) return 1;
+    if (exp1->amt < exp2->amt) return sort == SORT_UP ? -1 : 1;
+    if (exp1->amt > exp2->amt) return sort == SORT_UP ? 1 : -1;
     return cmpID(exp1->expid, exp2->expid);
 }
-int wxCALLBACK cmpExpAmtDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
+int wxCALLBACK cmpExpCat(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
     exp_t *exp1 = (exp_t *) item1;
     exp_t *exp2 = (exp_t *) item2;
-
-    if (exp1->amt < exp2->amt) return 1;
-    if (exp1->amt > exp2->amt) return -1;
-    return cmpID(exp1->expid, exp2->expid);
-}
-int wxCALLBACK cmpExpCatAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
-    exp_t *exp1 = (exp_t *) item1;
-    exp_t *exp2 = (exp_t *) item2;
+    int sort = (int) sortData;
 
     int cmp = wxString::FromUTF8(exp1->catname->s).CmpNoCase(wxString::FromUTF8(exp2->catname->s));
-    if (cmp != 0) return cmp;
+    if (cmp != 0) return sort == SORT_UP ? cmp : -cmp;
     return cmpID(exp1->expid, exp2->expid);
 }
-int wxCALLBACK cmpExpCatDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
-    exp_t *exp1 = (exp_t *) item1;
-    exp_t *exp2 = (exp_t *) item2;
-
-    int cmp = wxString::FromUTF8(exp1->catname->s).CmpNoCase(wxString::FromUTF8(exp2->catname->s));
-    if (cmp != 0) return -cmp;
-    return cmpID(exp1->expid, exp2->expid);
-}
-int wxCALLBACK cmpCatSummaryNameAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
+int wxCALLBACK cmpCattotalName(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
     cattotal_t *ct1 = (cattotal_t *) item1;
     cattotal_t *ct2 = (cattotal_t *) item2;
+    int sort = (int) sortData;
 
     int cmp = wxString::FromUTF8(ct1->catname->s).CmpNoCase(wxString::FromUTF8(ct2->catname->s));
-    if (cmp != 0) return cmp;
+    if (cmp != 0) return sort == SORT_UP ? cmp : -cmp;
     return cmpID(ct1->catid, ct2->catid);
 }
-int wxCALLBACK cmpCatSummaryNameDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
+int wxCALLBACK cmpCattotalTotal(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
     cattotal_t *ct1 = (cattotal_t *) item1;
     cattotal_t *ct2 = (cattotal_t *) item2;
+    int sort = (int) sortData;
 
-    int cmp = wxString::FromUTF8(ct1->catname->s).CmpNoCase(wxString::FromUTF8(ct2->catname->s));
-    if (cmp != 0) return -cmp;
+    if (ct1->total < ct2->total) return sort == SORT_UP ? -1 : 1;
+    if (ct1->total > ct2->total) return sort == SORT_UP ? 1 : -1;
     return cmpID(ct1->catid, ct2->catid);
 }
-int wxCALLBACK cmpCatSummarySubtotalAsc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
-    cattotal_t *ct1 = (cattotal_t *) item1;
-    cattotal_t *ct2 = (cattotal_t *) item2;
 
-    if (ct1->total < ct2->total) return -1;
-    if (ct1->total > ct2->total) return 1;
-    return cmpID(ct1->catid, ct2->catid);
-}
-int wxCALLBACK cmpCatSummarySubtotalDesc(wxIntPtr item1, wxIntPtr item2, wxIntPtr sortData) {
-    cattotal_t *ct1 = (cattotal_t *) item1;
-    cattotal_t *ct2 = (cattotal_t *) item2;
-
-    if (ct1->total < ct2->total) return 1;
-    if (ct1->total > ct2->total) return -1;
-    return cmpID(ct1->catid, ct2->catid);
-}

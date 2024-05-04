@@ -62,12 +62,12 @@ public:
 
 private:
     exp_t *m_propgrid_xp;
-    bool m_sortDate = false;
-    bool m_sortDesc = false;
-    bool m_sortAmt = false;
-    bool m_sortCat = false;
-    bool m_sortCatSummaryName = false;
-    bool m_sortCatSummarySubtotal = false;
+    bool m_sortDate = SORT_DOWN;
+    bool m_sortDesc = SORT_DOWN;
+    bool m_sortAmt = SORT_DOWN;
+    bool m_sortCat = SORT_DOWN;
+    bool m_sortCattotalName = SORT_DOWN;
+    bool m_sortCattotalTotal = SORT_DOWN;
 
     wxDECLARE_EVENT_TABLE();
 

@@ -529,10 +529,10 @@ void MyFrame::RefreshExpensesList(uint64_t sel_expid, long sel_row) {
     assert(pnl != NULL);
     pnl->Layout();
 
-    m_sortDate = false;
-    m_sortDesc = false;
-    m_sortAmt = false;
-    m_sortCat = false;
+    m_sortDate = SORT_DOWN;
+    m_sortDesc = SORT_DOWN;
+    m_sortAmt = SORT_DOWN;
+    m_sortCat = SORT_DOWN;
 }
 void MyFrame::RefreshSingleExpenseInList(exp_t *xp) {
     ExpenseContext *ctx = getContext();
@@ -593,8 +593,8 @@ void MyFrame::RefreshCategorySummary() {
     if (ctx->cattotals->len > 0)
         lv->SetItemState(0, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
 
-    m_sortCatSummaryName = false;
-    m_sortCatSummarySubtotal = false;
+    m_sortCattotalName = SORT_DOWN;
+    m_sortCattotalTotal = SORT_DOWN;
 }
 
 void MyFrame::EditExpense(exp_t *xp) {
@@ -837,46 +837,34 @@ void MyFrame::OnExpenseListColClick(wxListEvent& event) {
     int icol = event.GetColumn();
     if (icol == 0) {
         m_sortDate = !m_sortDate;
-        if (m_sortDate)
-            lv->SortItems(cmpExpDateAsc, 0);
-        else
-            lv->SortItems(cmpExpDateDesc, 0);
-        m_sortDesc = false;
-        m_sortAmt = false;
-        m_sortCat = false;
+        lv->SortItems(cmpExpDate, m_sortDate);
+        m_sortDesc = SORT_DOWN;
+        m_sortAmt = SORT_DOWN;
+        m_sortCat = SORT_DOWN;
         return;
     }
     if (icol == 1) {
         m_sortDesc = !m_sortDesc;
-        if (m_sortDesc)
-            lv->SortItems(cmpExpDescriptionAsc, 0);
-        else
-            lv->SortItems(cmpExpDescriptionDesc, 0);
-        m_sortDate = false;
-        m_sortAmt = false;
-        m_sortCat = false;
+        lv->SortItems(cmpExpDesc, m_sortDesc);
+        m_sortDate = SORT_DOWN;
+        m_sortAmt = SORT_DOWN;
+        m_sortCat = SORT_DOWN;
         return;
     }
     if (icol == 2) {
         m_sortAmt = !m_sortAmt;
-        if (m_sortAmt)
-            lv->SortItems(cmpExpAmtAsc, 0);
-        else
-            lv->SortItems(cmpExpAmtDesc, 0);
-        m_sortDate = false;
-        m_sortDesc = false;
-        m_sortCat = false;
+        lv->SortItems(cmpExpAmt, m_sortAmt);
+        m_sortDate = SORT_DOWN;
+        m_sortDesc = SORT_DOWN;
+        m_sortCat = SORT_DOWN;
         return;
     }
     if (icol == 3) {
         m_sortCat = !m_sortCat;
-        if (m_sortCat)
-            lv->SortItems(cmpExpCatAsc, 0);
-        else
-            lv->SortItems(cmpExpCatDesc, 0);
-        m_sortDate = false;
-        m_sortDesc = false;
-        m_sortAmt = false;
+        lv->SortItems(cmpExpCat, m_sortCat);
+        m_sortDate = SORT_DOWN;
+        m_sortDesc = SORT_DOWN;
+        m_sortAmt = SORT_DOWN;
         return;
     }
 }
@@ -1015,21 +1003,15 @@ void MyFrame::OnCategoriesSummaryListColClick(wxListEvent& event) {
     assert(lv != NULL);
     int icol = event.GetColumn();
     if (icol == 0) {
-        m_sortCatSummaryName = !m_sortCatSummaryName;
-        if (m_sortCatSummaryName)
-            lv->SortItems(cmpCatSummaryNameAsc, 0);
-        else
-            lv->SortItems(cmpCatSummaryNameDesc, 0);
-        m_sortCatSummarySubtotal = false;
+        m_sortCattotalName = !m_sortCattotalName;
+        lv->SortItems(cmpCattotalName, m_sortCattotalName);
+        m_sortCattotalTotal = SORT_DOWN;
         return;
     }
     if (icol == 1) {
-        m_sortCatSummarySubtotal = !m_sortCatSummarySubtotal;
-        if (m_sortCatSummarySubtotal)
-            lv->SortItems(cmpCatSummarySubtotalAsc, 0);
-        else
-            lv->SortItems(cmpCatSummarySubtotalDesc, 0);
-        m_sortCatSummaryName = false;
+        m_sortCattotalTotal = !m_sortCattotalTotal;
+        lv->SortItems(cmpCattotalTotal, m_sortCattotalTotal);
+        m_sortCattotalName = SORT_DOWN;
         return;
     }
 }
