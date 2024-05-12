@@ -450,6 +450,72 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, arrayexp_t *xps
     sqlite3_finalize(stmt);
     return 0;
 }
+
+#define MAX_CATID 9999
+#define MAX_CATID_DIGITS 5
+#define MAX_CATS_IN_QUERY 50
+
+int db_select_exp_with_catids(sqlite3 *db, date_t min_date, date_t max_date, uint64_t *catids, int num_catids, arrayexp_t *xps) {
+    exp_t *xp;
+    sqlite3_stmt *stmt;
+    char s[1024];
+    char scatid[MAX_CATID_DIGITS];
+    char scatids[MAX_CATID_DIGITS * MAX_CATS_IN_QUERY] = "";
+    int z;
+
+    if (num_catids > MAX_CATS_IN_QUERY)
+        num_catids = MAX_CATS_IN_QUERY;
+
+    // scatids = catids separated by comma. Ex. "1, 2, 3, 4, 5"
+    for (int i=0; i < num_catids; i++) {
+        uint64_t catid = catids[i];
+        if (catid > MAX_CATID)
+            break;
+
+        snprintf(scatid, sizeof(scatid), "%ld", catid);
+        strcat(scatids, scatid);
+
+        if (i < num_catids-1)
+            strcat(scatids, ", ");
+    }
+
+    snprintf(s, sizeof(s),
+        "SELECT exp_id, date, desc, amt, exp.cat_id, IFNULL(cat.name, '') "
+        "FROM exp "
+        "LEFT OUTER JOIN cat ON exp.cat_id = cat.cat_id "
+        "WHERE date >= ? AND date < ? AND exp.cat_id IN (%s) "
+        "ORDER BY date DESC ",
+        scatids);
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    z = sqlite3_bind_int(stmt, 1, min_date);
+    assert(z == 0);
+    z = sqlite3_bind_int(stmt, 2, max_date);
+    assert(z == 0);
+
+    arrayexp_clear(xps);
+    while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
+        xp = exp_new();
+        xp->expid = sqlite3_column_int64(stmt, 0);
+        xp->date = sqlite3_column_int(stmt, 1);
+        str_assign(xp->desc, (char*)sqlite3_column_text(stmt, 2));
+        xp->amt = sqlite3_column_double(stmt, 3);
+        xp->catid = sqlite3_column_int64(stmt, 4);
+        str_assign(xp->catname, (char*)sqlite3_column_text(stmt, 5));
+
+        arrayexp_add(xps, xp);
+    }
+    if (z != SQLITE_DONE) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    sqlite3_finalize(stmt);
+    return 0;
+}
+
 int db_find_exp_by_id(sqlite3 *db, uint64_t expid, exp_t *xp) {
     sqlite3_stmt *stmt;
     const char *s;
