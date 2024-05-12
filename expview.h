@@ -13,7 +13,7 @@ typedef struct {
     sqlite3 *db;
     date_t startdt;
     date_t enddt;
-    array_t *xps;
+    arrayexp_t *xps;
 } ExpView;
 
 ExpView *expview_new(sqlite3 *db, date_t startdt, date_t enddt);

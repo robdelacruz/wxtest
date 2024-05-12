@@ -10,6 +10,8 @@
 #include "db.h"
 #include "expview.h"
 
+#define INIT_NUM_EXPVIEW_EXPENSES 1024
+
 ExpView *expview_new(sqlite3 *db, date_t startdt, date_t enddt) {
     ExpView *ev;
 
@@ -17,13 +19,12 @@ ExpView *expview_new(sqlite3 *db, date_t startdt, date_t enddt) {
     ev->db = db;
     ev->startdt = startdt;
     ev->enddt = enddt;
+    ev->xps = arrayexp_new(INIT_NUM_EXPVIEW_EXPENSES);
 
     return ev;
 }
 void expview_free(ExpView *ev) {
-    for (int i=0; i < ev->xps->len; i++)
-        exp_free(ev->xps->items[i]);
-    array_free(ev->xps);
+    arrayexp_free(ev->xps);
 
     free(ev);
 }
