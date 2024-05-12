@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 
-CSOURCES=db.c clib.c expense.c
+CSOURCES=db.c clib.c expense.c expview.c
 CPPSOURCES=App.cpp Frame.cpp EditExpenseDialog.cpp SetupCategoriesDialog.cpp
 COBJECTS=$(patsubst %.c, %.o, $(CSOURCES))
 CPPOBJECTS=$(patsubst %.cpp, %.o, $(CPPSOURCES))
