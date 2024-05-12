@@ -308,8 +308,8 @@ wxWindow* MyFrame::CreateExpensePG(wxWindow *parent) {
     ExpenseContext *ctx = getContext();
     cat_t *cat;
 
-    for (size_t i=0; i < ctx->cats->len; i++) {
-        cat = (cat_t *)ctx->cats->items[i];
+    for (size_t i=0; i < arraycat_len(ctx->cats); i++) {
+        cat = arraycat_item(ctx->cats, i);
         idcats.Add((int)cat->catid);
         cats.Add(wxString(cat->name->s));
     }
@@ -388,7 +388,7 @@ void MyFrame::RefreshMenu() {
     if (!ctx_is_open_expfile(ctx))
         return;
 
-    if (ctx->xps->len > 0) {
+    if (arrayexp_len(ctx->xps) > 0) {
         mb->Enable(ID_EXPENSE_EDIT, true);
         mb->Enable(ID_EXPENSE_DEL, true);
     } else {
@@ -503,8 +503,8 @@ void MyFrame::RefreshExpensesList(uint64_t sel_expid, long sel_row) {
     assert(lv != NULL);
     lv->DeleteAllItems();
 
-    for (size_t i=0; i < ctx->xps->len; i++) {
-        xp = (exp_t *) ctx->xps->items[i];
+    for (size_t i=0; i < arrayexp_len(ctx->xps); i++) {
+        xp = arrayexp_item(ctx->xps, i);
 
         lv->InsertItem(i, formatDate(xp->date, "%m-%d"));
         lv->SetItem(i, 1, xp->desc->s);
@@ -520,7 +520,7 @@ void MyFrame::RefreshExpensesList(uint64_t sel_expid, long sel_row) {
             sel_row = i;
     }
     // Restore previous row selection.
-    if (sel_row >= 0 && (size_t)sel_row < ctx->xps->len) {
+    if (sel_row >= 0 && (size_t)sel_row < arrayexp_len(ctx->xps)) {
         lv->SetItemState(sel_row, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
         lv->EnsureVisible(sel_row);
     }
@@ -540,8 +540,8 @@ void MyFrame::RefreshSingleExpenseInList(exp_t *xp) {
 
     lv = (wxListView *) wxWindow::FindWindowById(ID_EXPENSES_LIST, this);
     assert(lv != NULL);
-    for (size_t i=0; i < ctx->xps->len; i++) {
-        exp_t *listxp = (exp_t *) ctx->xps->items[i];
+    for (size_t i=0; i < arrayexp_len(ctx->xps); i++) {
+        exp_t *listxp = arrayexp_item(ctx->xps, i);
         if (listxp->expid == xp->expid) {
             lv->SetItem(i, 0, formatDate(xp->date, "%m-%d"));
             lv->SetItem(i, 1, xp->desc->s);
@@ -741,8 +741,8 @@ void MyFrame::OnExpenseDel(wxCommandEvent& event) {
     ctx_refresh_subtotals_year_month(ctx, xpyear, xpmonth);
     ctx_refresh_cattotals(ctx);
 
-    if ((size_t)sel_row > ctx->xps->len-1)
-        sel_row = ctx->xps->len-1;
+    if ((size_t)sel_row > arrayexp_len(ctx->xps)-1)
+        sel_row = arrayexp_len(ctx->xps)-1;
     RefreshNav();
     RefreshExpensesList(0, sel_row);
     RefreshCategorySummary();

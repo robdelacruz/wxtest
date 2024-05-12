@@ -22,8 +22,8 @@ EditExpenseDialog::EditExpenseDialog(wxWindow *parent, exp_t *xp)
     m_xp = xp;
 
     m_icatsel = -1;
-    for (size_t i=0; i < ctx->cats->len; i++) {
-        cat_t *cat = (cat_t *) ctx->cats->items[i];
+    for (size_t i=0; i < arraycat_len(ctx->cats); i++) {
+        cat_t *cat = arraycat_item(ctx->cats, i);
         if (cat->catid == xp->catid) {
             m_icatsel = i;
             break;
@@ -54,8 +54,8 @@ void EditExpenseDialog::CreateControls() {
     DestroyChildren();
     SetSizer(NULL);
 
-    for (size_t i=0; i < ctx->cats->len; i++) {
-        cat_t *cat = (cat_t *) ctx->cats->items[i];
+    for (size_t i=0; i < arraycat_len(ctx->cats); i++) {
+        cat_t *cat = arraycat_item(ctx->cats, i);
         choices.Add(wxString::FromUTF8(cat->name->s));
     }
 
@@ -135,10 +135,10 @@ uint64_t EditExpenseDialog::GetCatIdFromSelectedIndex(int icatsel) {
 
     if (icatsel < 0)
         return 0;
-    if ((size_t)icatsel > ctx->cats->len-1)
+    if ((size_t)icatsel > arraycat_len(ctx->cats)-1)
         return 0;
 
-    cat = (cat_t *) ctx->cats->items[icatsel];
+    cat = (cat_t *) arraycat_item(ctx->cats, icatsel);
     return cat->catid;
 }
 

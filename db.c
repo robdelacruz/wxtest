@@ -191,6 +191,58 @@ int exp_is_valid(exp_t *xp) {
     return 1;
 }
 
+arraycat_t *arraycat_new(size_t cap) {
+    arraycat_t *a = malloc(sizeof(arraycat_t));
+    a->cats = array_new(cap);
+    return a;
+}
+void arraycat_free(arraycat_t *a) {
+    arraycat_clear(a);
+    array_free(a->cats);
+    free(a);
+}
+void arraycat_clear(arraycat_t *a) {
+    for (int i=0; i < a->cats->len; i++)
+        cat_free((cat_t *) a->cats->items[i]);
+    array_clear(a->cats);
+}
+inline void arraycat_add(arraycat_t *a, cat_t *cat) {
+    array_add(a->cats, cat);
+}
+inline size_t arraycat_len(arraycat_t *a) {
+    return a->cats->len;
+}
+cat_t *arraycat_item(arraycat_t *a, size_t i) {
+    assert(i < a->cats->len);
+    return a->cats->items[i];
+}
+
+arrayexp_t *arrayexp_new(size_t cap) {
+    arrayexp_t *a = malloc(sizeof(arrayexp_t));
+    a->xps = array_new(cap);
+    return a;
+}
+void arrayexp_free(arrayexp_t *a) {
+    arrayexp_clear(a);
+    array_free(a->xps);
+    free(a);
+}
+void arrayexp_clear(arrayexp_t *a) {
+    for (int i=0; i < a->xps->len; i++)
+        exp_free(a->xps->items[i]);
+    array_clear(a->xps);
+}
+void arrayexp_add(arrayexp_t *a, exp_t *xp) {
+    array_add(a->xps, xp);
+}
+inline size_t arrayexp_len(arrayexp_t *a) {
+    return a->xps->len;
+}
+exp_t *arrayexp_item(arrayexp_t *a, size_t i) {
+    assert(i < a->xps->len);
+    return a->xps->items[i];
+}
+
 cattotal_t *cattotal_new() {
     cattotal_t *ct = (cattotal_t *) malloc(sizeof(cattotal_t));
     ct->catid = 0;
@@ -260,7 +312,7 @@ int db_find_cat_by_name(sqlite3 *db, const char *name, uint64_t *catid) {
     sqlite3_finalize(stmt);
     return 0;
 }
-int db_select_cat(sqlite3 *db, array_t *cats) {
+int db_select_cat(sqlite3 *db, arraycat_t *cats) {
     cat_t *cat;
     sqlite3_stmt *stmt;
     const char *s;
@@ -273,15 +325,12 @@ int db_select_cat(sqlite3 *db, array_t *cats) {
         return z;
     }
 
-    for (size_t i=0; i < cats->len; i++)
-        cat_free((cat_t *)cats->items[i]);
-    array_clear(cats);
-
+    arraycat_clear(cats);
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
         cat = cat_new();
         cat->catid = sqlite3_column_int64(stmt, 0);
         str_assign(cat->name, (char*)sqlite3_column_text(stmt, 1));
-        array_add(cats, cat);
+        arraycat_add(cats, cat);
     }
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
@@ -361,7 +410,7 @@ int db_del_cat(sqlite3 *db, uint64_t catid) {
     return 0;
 }
 
-int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps) {
+int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, arrayexp_t *xps) {
     exp_t *xp;
     sqlite3_stmt *stmt;
     const char *s;
@@ -382,10 +431,7 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps) {
     z = sqlite3_bind_int(stmt, 2, max_date);
     assert(z == 0);
 
-    for (size_t i=0; i < xps->len; i++)
-        exp_free((exp_t *)xps->items[i]);
-    array_clear(xps);
-
+    arrayexp_clear(xps);
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
         xp = exp_new();
         xp->expid = sqlite3_column_int64(stmt, 0);
@@ -395,7 +441,7 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps) {
         xp->catid = sqlite3_column_int64(stmt, 4);
         str_assign(xp->catname, (char*)sqlite3_column_text(stmt, 5));
 
-        array_add(xps, xp);
+        arrayexp_add(xps, xp);
     }
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
@@ -438,6 +484,115 @@ int db_find_exp_by_id(sqlite3 *db, uint64_t expid, exp_t *xp) {
     sqlite3_finalize(stmt);
     return 0;
 }
+
+int db_add_exp(sqlite3 *db, exp_t *xp) {
+    sqlite3_stmt *stmt;
+    const char *s;
+    int z;
+
+    s = "INSERT INTO exp (date, desc, amt, cat_id) VALUES (?, ?, ?, ?);";
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    z = sqlite3_bind_int(stmt, 1, xp->date);
+    assert(z == 0);
+    z = sqlite3_bind_text(stmt, 2, xp->desc->s, -1, NULL);
+    assert(z == 0);
+    z = sqlite3_bind_double(stmt, 3, xp->amt);
+    assert(z == 0);
+    z = sqlite3_bind_int(stmt, 4, xp->catid);
+    assert(z == 0);
+
+    z = sqlite3_step(stmt);
+    if (z != SQLITE_DONE) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    sqlite3_finalize(stmt);
+
+    xp->expid = sqlite3_last_insert_rowid(db);
+    return 0;
+}
+int db_edit_exp(sqlite3 *db, exp_t *xp) {
+    sqlite3_stmt *stmt;
+    const char *s;
+    int z;
+
+    s = "UPDATE exp SET date = ?, desc = ?, amt = ?, cat_id = ? WHERE exp_id = ?";
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    z = sqlite3_bind_int(stmt, 1, xp->date);
+    assert(z == 0);
+    z = sqlite3_bind_text(stmt, 2, xp->desc->s, -1, NULL);
+    assert(z == 0);
+    z = sqlite3_bind_double(stmt, 3, xp->amt);
+    assert(z == 0);
+    z = sqlite3_bind_int(stmt, 4, xp->catid);
+    assert(z == 0);
+    z = sqlite3_bind_int(stmt, 5, xp->expid);
+    assert(z == 0);
+
+    z = sqlite3_step(stmt);
+    if (z != SQLITE_DONE) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    sqlite3_finalize(stmt);
+    return 0;
+}
+int db_del_exp(sqlite3 *db, uint64_t expid) {
+    sqlite3_stmt *stmt;
+    const char *s;
+    int z;
+
+    s = "DELETE FROM exp WHERE exp_id = ?";
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    z = sqlite3_bind_int(stmt, 1, expid);
+    assert(z == 0);
+
+    z = sqlite3_step(stmt);
+    if (z != SQLITE_DONE) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    sqlite3_finalize(stmt);
+    return 0;
+}
+
+int db_update_exp_change_catid(sqlite3 *db, uint64_t old_catid, uint64_t new_catid) {
+    sqlite3_stmt *stmt;
+    const char *s;
+    int z;
+
+    s = "UPDATE exp SET cat_id = ? WHERE cat_id = ?";
+    z = prepare_sql(db, s, &stmt);
+    if (z != 0) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    z = sqlite3_bind_int(stmt, 1, new_catid);
+    assert(z == 0);
+    z = sqlite3_bind_int(stmt, 2, old_catid);
+    assert(z == 0);
+
+    z = sqlite3_step(stmt);
+    if (z != SQLITE_DONE) {
+        db_handle_err(db, stmt, s);
+        return z;
+    }
+    sqlite3_finalize(stmt);
+    return 0;
+}
+
 int db_subtotal_exp(sqlite3 *db, date_t min_date, date_t max_date, double *sum) {
     sqlite3_stmt *stmt;
     const char *s;
@@ -647,114 +802,6 @@ int db_select_cattotals(sqlite3 *db, date_t min_date, date_t max_date, array_t *
         ct->count = sqlite3_column_int(stmt, 3);
         array_add(cattotals, ct);
     }
-    if (z != SQLITE_DONE) {
-        db_handle_err(db, stmt, s);
-        return z;
-    }
-    sqlite3_finalize(stmt);
-    return 0;
-}
-
-int db_add_exp(sqlite3 *db, exp_t *xp) {
-    sqlite3_stmt *stmt;
-    const char *s;
-    int z;
-
-    s = "INSERT INTO exp (date, desc, amt, cat_id) VALUES (?, ?, ?, ?);";
-    z = prepare_sql(db, s, &stmt);
-    if (z != 0) {
-        db_handle_err(db, stmt, s);
-        return z;
-    }
-    z = sqlite3_bind_int(stmt, 1, xp->date);
-    assert(z == 0);
-    z = sqlite3_bind_text(stmt, 2, xp->desc->s, -1, NULL);
-    assert(z == 0);
-    z = sqlite3_bind_double(stmt, 3, xp->amt);
-    assert(z == 0);
-    z = sqlite3_bind_int(stmt, 4, xp->catid);
-    assert(z == 0);
-
-    z = sqlite3_step(stmt);
-    if (z != SQLITE_DONE) {
-        db_handle_err(db, stmt, s);
-        return z;
-    }
-    sqlite3_finalize(stmt);
-
-    xp->expid = sqlite3_last_insert_rowid(db);
-    return 0;
-}
-int db_edit_exp(sqlite3 *db, exp_t *xp) {
-    sqlite3_stmt *stmt;
-    const char *s;
-    int z;
-
-    s = "UPDATE exp SET date = ?, desc = ?, amt = ?, cat_id = ? WHERE exp_id = ?";
-    z = prepare_sql(db, s, &stmt);
-    if (z != 0) {
-        db_handle_err(db, stmt, s);
-        return z;
-    }
-    z = sqlite3_bind_int(stmt, 1, xp->date);
-    assert(z == 0);
-    z = sqlite3_bind_text(stmt, 2, xp->desc->s, -1, NULL);
-    assert(z == 0);
-    z = sqlite3_bind_double(stmt, 3, xp->amt);
-    assert(z == 0);
-    z = sqlite3_bind_int(stmt, 4, xp->catid);
-    assert(z == 0);
-    z = sqlite3_bind_int(stmt, 5, xp->expid);
-    assert(z == 0);
-
-    z = sqlite3_step(stmt);
-    if (z != SQLITE_DONE) {
-        db_handle_err(db, stmt, s);
-        return z;
-    }
-    sqlite3_finalize(stmt);
-    return 0;
-}
-int db_del_exp(sqlite3 *db, uint64_t expid) {
-    sqlite3_stmt *stmt;
-    const char *s;
-    int z;
-
-    s = "DELETE FROM exp WHERE exp_id = ?";
-    z = prepare_sql(db, s, &stmt);
-    if (z != 0) {
-        db_handle_err(db, stmt, s);
-        return z;
-    }
-    z = sqlite3_bind_int(stmt, 1, expid);
-    assert(z == 0);
-
-    z = sqlite3_step(stmt);
-    if (z != SQLITE_DONE) {
-        db_handle_err(db, stmt, s);
-        return z;
-    }
-    sqlite3_finalize(stmt);
-    return 0;
-}
-
-int db_update_exp_change_catid(sqlite3 *db, uint64_t old_catid, uint64_t new_catid) {
-    sqlite3_stmt *stmt;
-    const char *s;
-    int z;
-
-    s = "UPDATE exp SET cat_id = ? WHERE cat_id = ?";
-    z = prepare_sql(db, s, &stmt);
-    if (z != 0) {
-        db_handle_err(db, stmt, s);
-        return z;
-    }
-    z = sqlite3_bind_int(stmt, 1, new_catid);
-    assert(z == 0);
-    z = sqlite3_bind_int(stmt, 2, old_catid);
-    assert(z == 0);
-
-    z = sqlite3_step(stmt);
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
         return z;

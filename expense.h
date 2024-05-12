@@ -13,17 +13,11 @@ typedef struct {
     str_t *expfile;
     sqlite3 *expfiledb;
     int year, month, day;
-    array_t *xps;
-    array_t *cats;
+    arrayexp_t *xps;
+    arraycat_t *cats;
     array_t *subtotals;
     array_t *cattotals;
 } ExpenseContext;
-
-typedef struct {
-    int year;
-    int month;
-    double total;
-} subtotal_t;
 
 const char *exp_strerror(int errnum);
 

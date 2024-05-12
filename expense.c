@@ -37,8 +37,8 @@ ExpenseContext *ctx_new() {
     ctx = (ExpenseContext*) malloc(sizeof(ExpenseContext));
     ctx->expfile = str_new(0);
     ctx->expfiledb = NULL;
-    ctx->xps = array_new(INIT_NUM_EXPENSES);
-    ctx->cats = array_new(INIT_NUM_CATEGORIES);
+    ctx->xps = arrayexp_new(INIT_NUM_EXPENSES);
+    ctx->cats = arraycat_new(INIT_NUM_CATEGORIES);
     ctx->subtotals = array_new(INIT_NUM_SUBTOTALS);
     ctx->cattotals = array_new(INIT_NUM_CATTOTALS);
     date_to_cal(date_today(), &ctx->year, &ctx->month, &ctx->day);
@@ -49,8 +49,8 @@ void ctx_free(ExpenseContext *ctx) {
     ctx_close(ctx);
     str_free(ctx->expfile);
 
-    array_free(ctx->xps);
-    array_free(ctx->cats);
+    arrayexp_free(ctx->xps);
+    arraycat_free(ctx->cats);
     array_free(ctx->subtotals);
     array_free(ctx->cattotals);
 
@@ -65,16 +65,12 @@ void ctx_close(ExpenseContext *ctx) {
 
     date_to_cal(date_today(), &ctx->year, &ctx->month, &ctx->day);
 
-    for (int i=0; i < ctx->xps->len; i++)
-        exp_free(ctx->xps->items[i]);
-    for (int i=0; i < ctx->cats->len; i++)
-        cat_free(ctx->cats->items[i]);
+    arrayexp_clear(ctx->xps);
+    arraycat_clear(ctx->cats);
     for (size_t i=0; i < ctx->subtotals->len; i++)
         free(ctx->subtotals->items[i]);
     for (size_t i=0; i < ctx->cattotals->len; i++)
         cattotal_free(ctx->cattotals->items[i]);
-    array_clear(ctx->xps);
-    array_clear(ctx->cats);
     array_clear(ctx->subtotals);
     array_clear(ctx->cattotals);
 }
