@@ -181,7 +181,8 @@ wxWindow* MyFrame::CreateNav(wxWindow *parent) {
     lvYears->SetColumn(1, colAmount);
 
     // pnl1: Year selector with 12 months listview
-    txtYear = new wxTextCtrl(pnl1, ID_NAV_YEAR, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, vldYear);
+    //txtYear = new wxTextCtrl(pnl1, ID_NAV_YEAR, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, vldYear);
+    txtYear = new wxTextCtrl(pnl1, ID_NAV_YEAR, "", wxDefaultPosition, wxSize(50, BTN_HEIGHT), wxTE_PROCESS_ENTER, vldYear);
     btnPrevYear = new wxBitmapButton(pnl1, ID_NAV_PREVYEAR, wxBitmap(back_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
     btnNextYear = new wxBitmapButton(pnl1, ID_NAV_NEXTYEAR, wxBitmap(forward_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
     lvMonths = new wxListView(pnl1, ID_NAV_MONTHSLIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
