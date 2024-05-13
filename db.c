@@ -451,44 +451,39 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, arrayexp_t *xps
     return 0;
 }
 
-#define MAX_CATID 9999
-#define MAX_CATID_DIGITS 5
-#define MAX_CATS_IN_QUERY 50
-
 int db_select_exp_with_catids(sqlite3 *db, date_t min_date, date_t max_date, uint64_t *catids, int num_catids, arrayexp_t *xps) {
     exp_t *xp;
     sqlite3_stmt *stmt;
-    char s[1024];
-    char scatid[MAX_CATID_DIGITS];
-    char scatids[MAX_CATID_DIGITS * MAX_CATS_IN_QUERY] = "";
+    str_t *strcatid = str_new(5);
+    str_t *strcatids = str_new(64);
+    str_t *strsql = str_new(1024);
     int z;
-
-    if (num_catids > MAX_CATS_IN_QUERY)
-        num_catids = MAX_CATS_IN_QUERY;
 
     // scatids = catids separated by comma. Ex. "1, 2, 3, 4, 5"
     for (int i=0; i < num_catids; i++) {
         uint64_t catid = catids[i];
-        if (catid > MAX_CATID)
-            break;
-
-        snprintf(scatid, sizeof(scatid), "%ld", catid);
-        strcat(scatids, scatid);
+        str_sprintf(strcatid, "%ld", catid);
+        str_append(strcatids, strcatid->s);
 
         if (i < num_catids-1)
-            strcat(scatids, ", ");
+            str_append(strcatids, ", ");
     }
 
-    snprintf(s, sizeof(s),
+    str_sprintf(strsql,
         "SELECT exp_id, date, desc, amt, exp.cat_id, IFNULL(cat.name, '') "
         "FROM exp "
         "LEFT OUTER JOIN cat ON exp.cat_id = cat.cat_id "
         "WHERE date >= ? AND date < ? AND exp.cat_id IN (%s) "
         "ORDER BY date DESC ",
-        scatids);
-    z = prepare_sql(db, s, &stmt);
+        strcatids->s);
+
+    str_free(strcatid);
+    str_free(strcatids);
+
+    z = prepare_sql(db, strsql->s, &stmt);
     if (z != 0) {
-        db_handle_err(db, stmt, s);
+        db_handle_err(db, stmt, strsql->s);
+        str_free(strsql);
         return z;
     }
     z = sqlite3_bind_int(stmt, 1, min_date);
@@ -509,10 +504,13 @@ int db_select_exp_with_catids(sqlite3 *db, date_t min_date, date_t max_date, uin
         arrayexp_add(xps, xp);
     }
     if (z != SQLITE_DONE) {
-        db_handle_err(db, stmt, s);
+        db_handle_err(db, stmt, strsql->s);
+        str_free(strsql);
         return z;
     }
     sqlite3_finalize(stmt);
+
+    str_free(strsql);
     return 0;
 }
 

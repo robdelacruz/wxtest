@@ -43,6 +43,12 @@ typedef struct {
     size_t cap;
 } array_t;
 
+typedef struct {
+    long *items;
+    size_t len;
+    size_t cap;
+} intarray_t;
+
 void quit(const char *s);
 void print_error(const char *s);
 void panic(const char *s);
@@ -58,6 +64,7 @@ str_t *str_new(size_t cap);
 void str_free(str_t *str);
 void str_assign(str_t *str, const char *s);
 void str_sprintf(str_t *str, const char *fmt, ...);
+void str_append(str_t *str, const char *s);
 
 date_t date_today();
 date_t date_from_cal(uint year, uint month, uint day);
@@ -72,14 +79,19 @@ date_t date_next_day(date_t dt);
 
 array_t *array_new(size_t cap);
 void array_free(array_t *a);
-void array_assign(array_t *a, void **items, size_t len, size_t cap);
 void array_clear(array_t *a);
 void array_resize(array_t *a, size_t newcap);
 void array_add(array_t *a, void *p);
 void array_del(array_t *a, uint idx);
-
 typedef int (*sort_compare_func_t)(void *a, void *b);
 void sort_array(void *array[], size_t array_len, sort_compare_func_t cmpfunc);
+
+intarray_t *intarray_new(size_t cap);
+void intarray_free(intarray_t *a);
+void intarray_clear(intarray_t *a);
+void intarray_resize(intarray_t *a, size_t newcap);
+void intarray_add(intarray_t *a, long i);
+void intarray_del(intarray_t *a, uint idx);
 
 #ifdef __cplusplus
 }

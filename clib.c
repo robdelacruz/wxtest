@@ -179,16 +179,28 @@ void str_assign(str_t *str, const char *s) {
     str->len = s_len;
 }
 void str_sprintf(str_t *str, const char *fmt, ...) {
-    char *p = NULL;
+    char buf[4096];
     va_list args;
+    int z;
 
     va_start(args, fmt);
-    if (vasprintf(&p, fmt, args) == -1)
-        panic("vasprintf() out of memory");
+    z = vsnprintf(buf, sizeof(buf)-1, fmt, args);
+    buf[sizeof(buf)-1] = 0;
     va_end(args);
 
-    str_assign(str, p);
-    free(p);
+    if (z < 0)
+        return;
+    str_assign(str, buf);
+}
+void str_append(str_t *str, const char *s) {
+    size_t s_len = strlen(s);
+    if (str->len + s_len + 1 > str->cap) {
+        str->cap = str->len + s_len + 1;
+        str->s = realloc(str->s, str->cap);
+    }
+
+    strncpy(str->s + str->len, s, s_len);
+    str->len = str->len + s_len;
 }
 
 array_t *array_new(size_t cap) {
@@ -201,26 +213,23 @@ array_t *array_new(size_t cap) {
     return a;
 }
 void array_free(array_t *a) {
-    memset(a->items, 0, a->cap);
+    array_clear(a);
     free(a->items);
     free(a);
 }
-void array_assign(array_t *a, void **items, size_t len, size_t cap) {
-    a->items = items;
-    a->len = len;
-    a->cap = cap;
-}
 void array_clear(array_t *a) {
-    memset(a->items, 0, a->cap);
+    memset(a->items, 0, a->cap * sizeof(void*));
     a->len = 0;
 }
 void array_resize(array_t *a, size_t newcap) {
     assert(newcap > a->cap);
     void **p = (void**) realloc(a->items, newcap * sizeof(void*)); 
     if (p == NULL)
-        panic("array_realloc() out of memory\n");
+        panic("array_resize() out of memory\n");
     a->items = p;
     a->cap = newcap;
+    if (a->len > a->cap)
+        a->len = a->cap;
 }
 void array_add(array_t *a, void *p) {
     if (a->len >= a->cap)
@@ -234,7 +243,6 @@ void array_del(array_t *a, uint idx) {
     }
     a->len--;
 }
-
 // sort_array() implementation functions
 static void swap_array(void *array[], int i, int j) {
     void *tmp = array[i];
@@ -266,3 +274,43 @@ void sort_array(void *array[], size_t array_len, sort_compare_func_t cmpfunc) {
     sort_array_part(array, 0, array_len-1, cmpfunc);
 }
 
+intarray_t *intarray_new(size_t cap) {
+    if (cap == 0)
+        cap = 8;
+    intarray_t *a = (intarray_t*) malloc(sizeof(intarray_t));
+    a->items = (long*) malloc(sizeof(a->items[0]) * cap);
+    a->len = 0;
+    a->cap = cap;
+    return a;
+}
+void intarray_free(intarray_t *a) {
+    intarray_clear(a);
+    free(a->items);
+    free(a);
+}
+void intarray_clear(intarray_t *a) {
+    memset(a->items, 0, a->cap * sizeof(long));
+    a->len = 0;
+}
+void intarray_resize(intarray_t *a, size_t newcap) {
+    assert(newcap > a->cap);
+    long *p = (long*) realloc(a->items, newcap * sizeof(long)); 
+    if (p == NULL)
+        panic("intarray_resize() out of memory\n");
+    a->items = p;
+    a->cap = newcap;
+    if (a->len > a->cap)
+        a->len = a->cap;
+}
+void intarray_add(intarray_t *a, long i) {
+    if (a->len >= a->cap)
+        intarray_resize(a, a->cap * 2);
+    a->items[a->len] = i;
+    a->len++;
+}
+void intarray_del(intarray_t *a, uint idx) {
+    for (size_t i=idx; i < a->len-1; i++) {
+        a->items[i] = a->items[i+1];
+    }
+    a->len--;
+}
