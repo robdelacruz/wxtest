@@ -41,3 +41,6 @@ https://wiki.wlug.org.nz/MakefileHowto
 // wxpropertygrid
 https://docs.wxwidgets.org/latest/overview_propgrid.html
 
+// resize listview columns when EVT_SIZE occured:
+https://forums.wxwidgets.org/viewtopic.php?t=8700
+

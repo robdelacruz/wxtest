@@ -135,7 +135,7 @@ void MyFrame::CreateControls() {
     nav = CreateNav(split);
     contentview = CreateContentView(split);
     split->SplitVertically(nav, contentview);
-    split->SetSashPosition(155);
+    split->SetSashPosition(200);
 
     vboxMain = new wxBoxSizer(wxVERTICAL);
     vboxMain->Add(split, 1, wxEXPAND, 0);
@@ -158,8 +158,8 @@ wxWindow* MyFrame::CreateNav(wxWindow *parent) {
     wxTextCtrl *txtYear;
     wxIntegerValidator<int> vldYear(NULL, wxNUM_VAL_DEFAULT);
     wxBitmapButton *btnPrevYear, *btnNextYear;
-    wxListView *lvMonths;
-    wxListView *lvYears;
+    NavListView *lvMonths;
+    NavListView *lvYears;
     wxListItem colAmount;
     wxBoxSizer *hbox;
     wxBoxSizer *vbox;
@@ -171,11 +171,11 @@ wxWindow* MyFrame::CreateNav(wxWindow *parent) {
     pnl2 = new wxPanel(nb, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 
     // pnl2: All years listview
-    lvYears = new wxListView(pnl2, ID_NAV_YEARSLIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
+    lvYears = new NavListView(pnl2, ID_NAV_YEARSLIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
     lvYears->AppendColumn("Year");
     lvYears->AppendColumn("Amount");
-    lvYears->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
-    lvYears->SetColumnWidth(1, wxLIST_AUTOSIZE_USEHEADER);
+    lvYears->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    lvYears->SetColumnWidth(1, wxLIST_AUTOSIZE);
     lvYears->GetColumn(1, colAmount);
     colAmount.SetAlign(wxLIST_FORMAT_RIGHT);
     lvYears->SetColumn(1, colAmount);
@@ -185,11 +185,11 @@ wxWindow* MyFrame::CreateNav(wxWindow *parent) {
     txtYear = new wxTextCtrl(pnl1, ID_NAV_YEAR, "", wxDefaultPosition, wxSize(50, BTN_HEIGHT), wxTE_PROCESS_ENTER, vldYear);
     btnPrevYear = new wxBitmapButton(pnl1, ID_NAV_PREVYEAR, wxBitmap(back_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
     btnNextYear = new wxBitmapButton(pnl1, ID_NAV_NEXTYEAR, wxBitmap(forward_xpm), wxDefaultPosition, wxSize(-1, BTN_HEIGHT));
-    lvMonths = new wxListView(pnl1, ID_NAV_MONTHSLIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
+    lvMonths = new NavListView(pnl1, ID_NAV_MONTHSLIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_NO_HEADER);
     lvMonths->AppendColumn("Month");
     lvMonths->AppendColumn("Amount");
-    lvMonths->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
-    lvMonths->SetColumnWidth(1, wxLIST_AUTOSIZE_USEHEADER);
+    lvMonths->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    lvMonths->SetColumnWidth(1, wxLIST_AUTOSIZE);
     lvMonths->GetColumn(1, colAmount);
     colAmount.SetAlign(wxLIST_FORMAT_RIGHT);
     lvMonths->SetColumn(1, colAmount);
@@ -400,7 +400,14 @@ void MyFrame::RefreshMenu() {
 void MyFrame::RefreshNav() {
     ExpenseContext *ctx = getContext();
     wxNotebook *nb = (wxNotebook *) wxWindow::FindWindowById(ID_NAV_NB);
+    wxListView *lvYears = (wxListView *) wxWindow::FindWindowById(ID_NAV_YEARSLIST);
+    wxListView *lvMonths = (wxListView *) wxWindow::FindWindowById(ID_NAV_MONTHSLIST);
+    wxTextCtrl *txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
+
     assert(nb != NULL);
+    assert(lvYears != NULL);
+    assert(lvMonths != NULL);
+    assert(txtYear != NULL);
 
     // ctx->subtotals array holds subtotals for all years and months in date desc order
     // It contains all years from highest to lowest that have expenses.
@@ -417,11 +424,6 @@ void MyFrame::RefreshNav() {
     if (nb->GetSelection() == 0) {
         // Refresh monthly nav
         int istart = -1;
-        wxTextCtrl *txtYear = (wxTextCtrl *) wxWindow::FindWindowById(ID_NAV_YEAR);
-        wxListView *lvMonths = (wxListView *) wxWindow::FindWindowById(ID_NAV_MONTHSLIST);
-        assert(txtYear != NULL);
-        assert(lvMonths != NULL);
-
         txtYear->ChangeValue(wxString::Format("%d", ctx->year));
         lvMonths->Select(ctx->month);
 
@@ -461,9 +463,6 @@ void MyFrame::RefreshNav() {
     } else {
         // Refresh yearly nav
         int nitem=0;
-        wxListView *lvYears = (wxListView *) wxWindow::FindWindowById(ID_NAV_YEARSLIST);
-        assert(lvYears != NULL);
-
         lvYears->DeleteAllItems();
         for (size_t i=0; i < ctx->subtotals->len; i++) {
             subtotal_t *st = (subtotal_t *) ctx->subtotals->items[i];
@@ -479,6 +478,15 @@ void MyFrame::RefreshNav() {
             nitem++;
         }
     }
+
+    int w, h;
+    lvMonths->GetSize(&w, &h);
+    lvMonths->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    lvMonths->SetColumnWidth(1, w - lvMonths->GetColumnWidth(0));
+
+    lvYears->GetSize(&w, &h);
+    lvYears->SetColumnWidth(0, wxLIST_AUTOSIZE);
+    lvYears->SetColumnWidth(1, w - lvYears->GetColumnWidth(0));
 }
 // To select row number: RefreshExpensesList(0, rownum)
 // To select expense id: RefreshExpensesList(expid, 0)
@@ -1017,3 +1025,19 @@ void MyFrame::OnCategoriesSummaryListColClick(wxListEvent& event) {
     }
 }
 
+wxBEGIN_EVENT_TABLE(NavListView, wxListView)
+    EVT_SIZE(NavListView::OnSize)
+wxEND_EVENT_TABLE()
+
+NavListView::NavListView(wxWindow *parent, wxWindowID winid, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name) : wxListView(parent, winid, pos, size, style, validator, name) {
+}
+
+NavListView::~NavListView() {
+}
+
+void NavListView::OnSize(wxSizeEvent& event) {
+    int w = event.GetSize().GetWidth();
+
+    SetColumnWidth(1, w - GetColumnWidth(0));
+    event.Skip();
+}

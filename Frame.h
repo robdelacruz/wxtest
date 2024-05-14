@@ -60,6 +60,8 @@ public:
 
     void OnCategoriesSummaryListColClick(wxListEvent& event);
 
+    void OnNavMonthsListSize(wxSizeEvent& event);
+
 private:
     exp_t *m_propgrid_xp;
     bool m_sortDate = SORT_DOWN;
@@ -71,6 +73,17 @@ private:
 
     wxDECLARE_EVENT_TABLE();
 
+};
+
+class NavListView : public wxListView {
+public:
+    NavListView(wxWindow *parent, wxWindowID winid=wxID_ANY, const wxPoint &pos=wxDefaultPosition, const wxSize &size=wxDefaultSize, long style=wxLC_REPORT, const wxValidator &validator=wxDefaultValidator, const wxString &name=wxListCtrlNameStr);
+    ~NavListView();
+
+    void OnSize(wxSizeEvent& event);
+
+private:
+    wxDECLARE_EVENT_TABLE();
 };
 
 #endif
