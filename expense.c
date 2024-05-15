@@ -37,10 +37,10 @@ ExpenseContext *ctx_new() {
     ctx = (ExpenseContext*) malloc(sizeof(ExpenseContext));
     ctx->expfile = str_new(0);
     ctx->expfiledb = NULL;
-    ctx->xps = arrayexp_new(INIT_NUM_EXPENSES);
-    ctx->cats = arraycat_new(INIT_NUM_CATEGORIES);
-    ctx->subtotals = array_new(INIT_NUM_SUBTOTALS);
-    ctx->cattotals = array_new(INIT_NUM_CATTOTALS);
+    ctx->xps = array_new(INIT_NUM_EXPENSES, (voidpfunc_t) exp_free);
+    ctx->cats = array_new(INIT_NUM_CATEGORIES, (voidpfunc_t) cat_free);
+    ctx->subtotals = array_new(INIT_NUM_SUBTOTALS, free);
+    ctx->cattotals = array_new(INIT_NUM_CATTOTALS, (voidpfunc_t) cattotal_free);
     date_to_cal(date_today(), &ctx->year, &ctx->month, &ctx->day);
 
     return ctx;
@@ -49,8 +49,8 @@ void ctx_free(ExpenseContext *ctx) {
     ctx_close(ctx);
     str_free(ctx->expfile);
 
-    arrayexp_free(ctx->xps);
-    arraycat_free(ctx->cats);
+    array_free(ctx->xps);
+    array_free(ctx->cats);
     array_free(ctx->subtotals);
     array_free(ctx->cattotals);
 
@@ -65,12 +65,8 @@ void ctx_close(ExpenseContext *ctx) {
 
     date_to_cal(date_today(), &ctx->year, &ctx->month, &ctx->day);
 
-    arrayexp_clear(ctx->xps);
-    arraycat_clear(ctx->cats);
-    for (size_t i=0; i < ctx->subtotals->len; i++)
-        free(ctx->subtotals->items[i]);
-    for (size_t i=0; i < ctx->cattotals->len; i++)
-        cattotal_free(ctx->cattotals->items[i]);
+    array_clear(ctx->xps);
+    array_clear(ctx->cats);
     array_clear(ctx->subtotals);
     array_clear(ctx->cattotals);
 }
@@ -179,6 +175,9 @@ void ctx_set_date_next_month(ExpenseContext *ctx) {
 }
 
 int ctx_refresh_categories(ExpenseContext *ctx) {
+    if (!ctx_is_open_expfile(ctx))
+        return 1;
+
     return db_select_cat(ctx->expfiledb, ctx->cats);
 }
 
@@ -242,8 +241,6 @@ int ctx_refresh_subtotals(ExpenseContext *ctx) {
     int z;
     sqlite3 *db = ctx->expfiledb;
 
-    for (size_t i=0; i < ctx->subtotals->len; i++)
-        free(ctx->subtotals->items[i]);
     array_clear(ctx->subtotals);
 
     z = db_get_exp_highest_year(db, &high_year);
@@ -319,6 +316,9 @@ int ctx_refresh_subtotals_year_month(ExpenseContext *ctx, int year, int month) {
 int ctx_refresh_cattotals(ExpenseContext *ctx) {
     date_t startdate;
     date_t enddate;
+
+    if (!ctx_is_open_expfile(ctx))
+        return 1;
 
     if (ctx->month == 0) {
         // 1 year

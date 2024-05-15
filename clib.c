@@ -203,13 +203,14 @@ void str_append(str_t *str, const char *s) {
     str->len = str->len + s_len;
 }
 
-array_t *array_new(size_t cap) {
+array_t *array_new(size_t cap, voidpfunc_t clear_item_func) {
     if (cap == 0)
         cap = 8;
     array_t *a = (array_t*) malloc(sizeof(array_t));
     a->items = (void**) malloc(sizeof(a->items[0]) * cap);
     a->len = 0;
     a->cap = cap;
+    a->clear_item_func = clear_item_func;
     return a;
 }
 void array_free(array_t *a) {
@@ -217,7 +218,13 @@ void array_free(array_t *a) {
     free(a->items);
     free(a);
 }
+static inline void clear_item(array_t *a, int i) {
+    if (a->clear_item_func != NULL)
+        (*a->clear_item_func)(a->items[i]);
+}
 void array_clear(array_t *a) {
+    for (int i=0; i < a->len; i++)
+        clear_item(a, i);
     memset(a->items, 0, a->cap * sizeof(void*));
     a->len = 0;
 }
@@ -239,6 +246,7 @@ void array_add(array_t *a, void *p) {
 }
 void array_del(array_t *a, uint idx) {
     for (size_t i=idx; i < a->len-1; i++) {
+        clear_item(a, i);
         a->items[i] = a->items[i+1];
     }
     a->len--;

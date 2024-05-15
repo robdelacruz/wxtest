@@ -92,20 +92,20 @@ void SetupCategoriesDialog::Refresh(uint64_t sel_catid, int sel_row) {
     wxStaticText *st = (wxStaticText *) wxWindow::FindWindowById(ID_SETUPCATEGORIES_HEADING, this);
     wxArrayString cats;
 
-    for (size_t i=0; i < arraycat_len(ctx->cats); i++) {
-        cat_t *cat = arraycat_item(ctx->cats, i);
+    for (size_t i=0; i < ctx->cats->len; i++) {
+        cat_t *cat = (cat_t *) ctx->cats->items[i];
         cats.Add(wxString::FromUTF8(cat->name->s));
 
         if (sel_catid != 0 && sel_catid == cat->catid)
             sel_row = i;
     }
 
-    st->SetLabel(wxString::Format("Number of categories: %ld", arraycat_len(ctx->cats)));
+    st->SetLabel(wxString::Format("Number of categories: %ld", ctx->cats->len));
     lb->Clear();
     lb->InsertItems(cats, 0);
 
     // Restore previous row selection.
-    if (sel_row >= 0 && (size_t)sel_row < arraycat_len(ctx->cats)) {
+    if (sel_row >= 0 && (size_t)sel_row < ctx->cats->len) {
         lb->SetSelection(sel_row);
         lb->EnsureVisible(sel_row);
     }
@@ -153,9 +153,9 @@ void SetupCategoriesDialog::OnEdit(wxCommandEvent& event) {
 
     if (isel == wxNOT_FOUND)
         return;
-    if (isel < 0 || (size_t)isel > arraycat_len(ctx->cats)-1)
+    if (isel < 0 || (size_t)isel > ctx->cats->len-1)
         return;
-    cat = (cat_t *) arraycat_item(ctx->cats, isel);
+    cat = (cat_t *) ctx->cats->items[isel];
 
     wxTextEntryDialog dlg(this, "Rename category", "Category Setup", wxString::FromUTF8(cat->name->s));
     if (dlg.ShowModal() != wxID_OK)
@@ -190,9 +190,9 @@ void SetupCategoriesDialog::OnDelete(wxCommandEvent& event) {
 
     if (isel == wxNOT_FOUND)
         return;
-    if (isel < 0 || (size_t)isel > arraycat_len(ctx->cats)-1)
+    if (isel < 0 || (size_t)isel > ctx->cats->len-1)
         return;
-    cat = (cat_t *) arraycat_item(ctx->cats, isel);
+    cat = (cat_t *) ctx->cats->items[isel];
 
     db_count_exp_with_catid(ctx->expfiledb, cat->catid, &num_cat_xps);
 
@@ -208,8 +208,8 @@ void SetupCategoriesDialog::OnDelete(wxCommandEvent& event) {
     ctx_delete_category(ctx, cat->catid);
 
     ctx_refresh_categories(ctx);
-    if ((size_t)isel > arraycat_len(ctx->cats)-1)
-        isel = arraycat_len(ctx->cats)-1;
+    if ((size_t)isel > ctx->cats->len-1)
+        isel = ctx->cats->len-1;
     Refresh(0, isel);
     ShowControls();
 }

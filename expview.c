@@ -19,12 +19,12 @@ ExpView *expview_new(sqlite3 *db, date_t startdt, date_t enddt) {
     ev->db = db;
     ev->startdt = startdt;
     ev->enddt = enddt;
-    ev->xps = arrayexp_new(INIT_NUM_EXPVIEW_EXPENSES);
+    ev->xps = array_new(INIT_NUM_EXPVIEW_EXPENSES, (voidpfunc_t) exp_free);
 
     return ev;
 }
 void expview_free(ExpView *ev) {
-    arrayexp_free(ev->xps);
+    array_free(ev->xps);
 
     free(ev);
 }

@@ -37,10 +37,12 @@ typedef struct {
 
 typedef time_t date_t;
 
+typedef void (*voidpfunc_t)(void *);
 typedef struct {
     void **items;
     size_t len;
     size_t cap;
+    voidpfunc_t clear_item_func;
 } array_t;
 
 typedef struct {
@@ -77,7 +79,7 @@ date_t date_next_month(date_t dt);
 date_t date_prev_day(date_t dt);
 date_t date_next_day(date_t dt);
 
-array_t *array_new(size_t cap);
+array_t *array_new(size_t cap, voidpfunc_t clear_item_func);
 void array_free(array_t *a);
 void array_clear(array_t *a);
 void array_resize(array_t *a, size_t newcap);

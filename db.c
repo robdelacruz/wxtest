@@ -191,58 +191,6 @@ int exp_is_valid(exp_t *xp) {
     return 1;
 }
 
-arraycat_t *arraycat_new(size_t cap) {
-    arraycat_t *a = malloc(sizeof(arraycat_t));
-    a->cats = array_new(cap);
-    return a;
-}
-void arraycat_free(arraycat_t *a) {
-    arraycat_clear(a);
-    array_free(a->cats);
-    free(a);
-}
-void arraycat_clear(arraycat_t *a) {
-    for (int i=0; i < a->cats->len; i++)
-        cat_free((cat_t *) a->cats->items[i]);
-    array_clear(a->cats);
-}
-inline void arraycat_add(arraycat_t *a, cat_t *cat) {
-    array_add(a->cats, cat);
-}
-inline size_t arraycat_len(arraycat_t *a) {
-    return a->cats->len;
-}
-cat_t *arraycat_item(arraycat_t *a, size_t i) {
-    assert(i < a->cats->len);
-    return a->cats->items[i];
-}
-
-arrayexp_t *arrayexp_new(size_t cap) {
-    arrayexp_t *a = malloc(sizeof(arrayexp_t));
-    a->xps = array_new(cap);
-    return a;
-}
-void arrayexp_free(arrayexp_t *a) {
-    arrayexp_clear(a);
-    array_free(a->xps);
-    free(a);
-}
-void arrayexp_clear(arrayexp_t *a) {
-    for (int i=0; i < a->xps->len; i++)
-        exp_free(a->xps->items[i]);
-    array_clear(a->xps);
-}
-void arrayexp_add(arrayexp_t *a, exp_t *xp) {
-    array_add(a->xps, xp);
-}
-inline size_t arrayexp_len(arrayexp_t *a) {
-    return a->xps->len;
-}
-exp_t *arrayexp_item(arrayexp_t *a, size_t i) {
-    assert(i < a->xps->len);
-    return a->xps->items[i];
-}
-
 cattotal_t *cattotal_new() {
     cattotal_t *ct = (cattotal_t *) malloc(sizeof(cattotal_t));
     ct->catid = 0;
@@ -312,7 +260,7 @@ int db_find_cat_by_name(sqlite3 *db, const char *name, uint64_t *catid) {
     sqlite3_finalize(stmt);
     return 0;
 }
-int db_select_cat(sqlite3 *db, arraycat_t *cats) {
+int db_select_cat(sqlite3 *db, array_t *cats) {
     cat_t *cat;
     sqlite3_stmt *stmt;
     const char *s;
@@ -325,12 +273,12 @@ int db_select_cat(sqlite3 *db, arraycat_t *cats) {
         return z;
     }
 
-    arraycat_clear(cats);
+    array_clear(cats);
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
         cat = cat_new();
         cat->catid = sqlite3_column_int64(stmt, 0);
         str_assign(cat->name, (char*)sqlite3_column_text(stmt, 1));
-        arraycat_add(cats, cat);
+        array_add(cats, cat);
     }
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
@@ -410,7 +358,7 @@ int db_del_cat(sqlite3 *db, uint64_t catid) {
     return 0;
 }
 
-int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, arrayexp_t *xps) {
+int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, array_t *xps) {
     exp_t *xp;
     sqlite3_stmt *stmt;
     const char *s;
@@ -431,7 +379,7 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, arrayexp_t *xps
     z = sqlite3_bind_int(stmt, 2, max_date);
     assert(z == 0);
 
-    arrayexp_clear(xps);
+    array_clear(xps);
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
         xp = exp_new();
         xp->expid = sqlite3_column_int64(stmt, 0);
@@ -441,7 +389,7 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, arrayexp_t *xps
         xp->catid = sqlite3_column_int64(stmt, 4);
         str_assign(xp->catname, (char*)sqlite3_column_text(stmt, 5));
 
-        arrayexp_add(xps, xp);
+        array_add(xps, xp);
     }
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, s);
@@ -451,7 +399,7 @@ int db_select_exp(sqlite3 *db, date_t min_date, date_t max_date, arrayexp_t *xps
     return 0;
 }
 
-int db_select_exp_with_catids(sqlite3 *db, date_t min_date, date_t max_date, uint64_t *catids, int num_catids, arrayexp_t *xps) {
+int db_select_exp_with_catids(sqlite3 *db, date_t min_date, date_t max_date, uint64_t *catids, int num_catids, array_t *xps) {
     exp_t *xp;
     sqlite3_stmt *stmt;
     str_t *strcatid = str_new(5);
@@ -491,7 +439,7 @@ int db_select_exp_with_catids(sqlite3 *db, date_t min_date, date_t max_date, uin
     z = sqlite3_bind_int(stmt, 2, max_date);
     assert(z == 0);
 
-    arrayexp_clear(xps);
+    array_clear(xps);
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
         xp = exp_new();
         xp->expid = sqlite3_column_int64(stmt, 0);
@@ -501,7 +449,7 @@ int db_select_exp_with_catids(sqlite3 *db, date_t min_date, date_t max_date, uin
         xp->catid = sqlite3_column_int64(stmt, 4);
         str_assign(xp->catname, (char*)sqlite3_column_text(stmt, 5));
 
-        arrayexp_add(xps, xp);
+        array_add(xps, xp);
     }
     if (z != SQLITE_DONE) {
         db_handle_err(db, stmt, strsql->s);
