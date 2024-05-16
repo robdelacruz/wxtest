@@ -802,10 +802,7 @@ int db_select_cattotals(sqlite3 *db, date_t min_date, date_t max_date, array_t *
     z = sqlite3_bind_int(stmt, 2, max_date);
     assert(z == 0);
 
-    for (size_t i=0; i < cattotals->len; i++)
-        cattotal_free((cattotal_t *) cattotals->items[i]);
     array_clear(cattotals);
-
     while ((z = sqlite3_step(stmt)) == SQLITE_ROW) {
         ct = cattotal_new();
         ct->catid = sqlite3_column_int64(stmt, 0);
