@@ -54,7 +54,7 @@ wxBEGIN_EVENT_TABLE(MyFrame, wxFrame)
 wxEND_EVENT_TABLE()
 
 MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(640,480)) {
-//    wxFont font = GetFont();
+    wxFont font = GetFont();
 
     setlocale(LC_NUMERIC, "");
     m_propgrid_xp = NULL;
@@ -62,8 +62,10 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefau
     SetIcon(wxIcon(home_xpm));
 
 //    font.SetPixelSize(wxSize(16,16));
-//    font.SetPointSize(12);
-//    SetFont(font);
+    font.SetPointSize(10);
+    SetFont(font);
+    SetBackgroundColour(wxColour(0,0,0));
+    SetForegroundColour(wxColour(0xff,0xff,0xff));
 
     CreateMenuBar();
     CreateStatusBar(2);
@@ -77,6 +79,11 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefau
 }
 
 MyFrame::~MyFrame() {
+}
+
+static void SetColors(wxWindow *w) {
+    w->SetBackgroundColour(wxColour(0x1f,0x29,0x37));
+    w->SetForegroundColour(wxColour(0xe5,0xe7,0xeb));
 }
 
 void MyFrame::CreateMenuBar() {
