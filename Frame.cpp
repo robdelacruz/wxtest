@@ -64,8 +64,8 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefau
 //    font.SetPixelSize(wxSize(16,16));
     font.SetPointSize(10);
     SetFont(font);
-    SetBackgroundColour(wxColour(0,0,0));
-    SetForegroundColour(wxColour(0xff,0xff,0xff));
+//    SetBackgroundColour(wxColour(0,0,0));
+//    SetForegroundColour(wxColour(0xff,0xff,0xff));
 
     CreateMenuBar();
     CreateStatusBar(2);
@@ -81,10 +81,10 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title, wxDefau
 MyFrame::~MyFrame() {
 }
 
-static void SetColors(wxWindow *w) {
-    w->SetBackgroundColour(wxColour(0x1f,0x29,0x37));
-    w->SetForegroundColour(wxColour(0xe5,0xe7,0xeb));
-}
+//static void SetColors(wxWindow *w) {
+//    w->SetBackgroundColour(wxColour(0x1f,0x29,0x37));
+//    w->SetForegroundColour(wxColour(0xe5,0xe7,0xeb));
+//}
 
 void MyFrame::CreateMenuBar() {
     wxMenuBar *mb;
